@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.utils import timezone
 from datetime import timedelta
 from .serializers import UserRegistrationSerializer, UserProfileSerializer
@@ -17,10 +19,15 @@ from .utils import (
 User = get_user_model()
 
 
+
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Custom login view that checks email verification before issuing tokens.
+    CSRF exempt - uses JWT authentication, not session cookies.
     """
+    permission_classes = [permissions.AllowAny]
+    
     def post(self, request, *args, **kwargs):
         # Get username/email from request
         username = request.data.get('username')
@@ -121,10 +128,12 @@ class VerifyEmailView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ResendOTPView(APIView):
     """
     API endpoint for resending verification OTP.
     Rate limited to prevent abuse.
+    CSRF exempt - public endpoint for email verification.
     """
     permission_classes = [permissions.AllowAny]
     
@@ -165,10 +174,10 @@ class ResendOTPView(APIView):
         user.email_otp_created_at = timezone.now()
         user.save()
         
-        send_verification_email(user, otp)
+        send_verification_email(user.email, otp)
         
         return Response({
-            'message': 'A new OTP has been sent to your email.'
+            'message': 'A new verification code has been sent to your email.'
         }, status=status.HTTP_200_OK)
 
 
