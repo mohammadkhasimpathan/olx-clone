@@ -83,7 +83,8 @@ class RegistrationRequestView(APIView):
         except Exception as e:
             # Log error in production
             print(f"Registration Request Error: {e}")
-            return Response({'error': 'An unexpected error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # RETURN ACTUAL ERROR FOR DEBUGGING
+            return Response({'error': f'Server Error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
