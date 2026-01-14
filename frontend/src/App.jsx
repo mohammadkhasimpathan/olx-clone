@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { UIProvider } from './context/UIContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SessionManager from './components/SessionManager';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import Home from './pages/Home';
@@ -34,88 +35,90 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 
 function App() {
   return (
-    <UIProvider>
-      <AuthProvider>
-        <SessionManager />
-        <Router>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/verify-email" element={<VerifyEmail />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/listings/:id" element={<ListingDetail />} />
+    <ErrorBoundary>
+      <UIProvider>
+        <AuthProvider>
+          <SessionManager />
+          <Router>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/verify-email" element={<VerifyEmail />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/listings/:id" element={<ListingDetail />} />
 
-                {/* Protected Routes */}
-                <Route
-                  path="/listings/create"
-                  element={
-                    <ProtectedRoute>
-                      <CreateListing />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/listings/:id/edit"
-                  element={
-                    <ProtectedRoute>
-                      <EditListing />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/my-listings"
-                  element={
-                    <ProtectedRoute>
-                      <MyListings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/saved-listings"
-                  element={
-                    <ProtectedRoute>
-                      <SavedListings />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Protected Routes */}
+                  <Route
+                    path="/listings/create"
+                    element={
+                      <ProtectedRoute>
+                        <CreateListing />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/listings/:id/edit"
+                    element={
+                      <ProtectedRoute>
+                        <EditListing />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-listings"
+                    element={
+                      <ProtectedRoute>
+                        <MyListings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/saved-listings"
+                    element={
+                      <ProtectedRoute>
+                        <SavedListings />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Admin Routes */}
-                <Route
-                  path="/admin"
-                  element={
-                    <AdminRoute>
-                      <AdminLayout />
-                    </AdminRoute>
-                  }
-                >
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="listings" element={<AdminListings />} />
-                  <Route path="users" element={<AdminUsers />} />
-                  <Route path="reports" element={<AdminReports />} />
-                  <Route path="audit-log" element={<AdminAuditLog />} />
-                </Route>
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-          {/* Global UI Components */}
-          <ToastContainer />
-          <LoadingSpinner />
-        </Router>
-      </AuthProvider>
-    </UIProvider>
+                  {/* Admin Routes */}
+                  <Route
+                    path="/admin"
+                    element={
+                      <AdminRoute>
+                        <AdminLayout />
+                      </AdminRoute>
+                    }
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="listings" element={<AdminListings />} />
+                    <Route path="users" element={<AdminUsers />} />
+                    <Route path="reports" element={<AdminReports />} />
+                    <Route path="audit-log" element={<AdminAuditLog />} />
+                  </Route>
+                </Routes>
+              </main>
+              <Footer />
+            </div>
+            {/* Global UI Components */}
+            <ToastContainer />
+            <LoadingSpinner />
+          </Router>
+        </AuthProvider>
+      </UIProvider>
+    </ErrorBoundary>
   );
 }
 
