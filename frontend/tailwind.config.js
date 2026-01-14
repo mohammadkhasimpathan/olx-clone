@@ -20,6 +20,9 @@ export default {
                     900: '#0c4a6e',
                 },
             },
+            boxShadow: {
+                'card': '0 4px 20px -4px rgba(0, 0, 0, 0.1)',
+            },
         },
     },
     plugins: [],
