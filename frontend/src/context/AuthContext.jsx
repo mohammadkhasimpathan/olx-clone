@@ -32,18 +32,6 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    const register = async (userData) => {
-        const data = await authService.register(userData);
-        // Auto-login after registration
-        if (data.user) {
-            await login({
-                username: userData.username,
-                password: userData.password
-            });
-        }
-        return data;
-    };
-
     const logout = () => {
         authService.logout();
         setUser(null);
@@ -59,7 +47,6 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         login,
-        register,
         logout,
         updateUser,
         isAuthenticated: !!user,
