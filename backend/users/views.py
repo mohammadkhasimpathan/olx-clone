@@ -234,18 +234,31 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 class RequestPasswordResetView(APIView):
     permission_classes = [permissions.AllowAny]
     def post(self, request):
+    def post(self, request):
         email = request.data.get('email')
         if not email: return Response({'error': 'Email required'}, 400)
         try:
-            user = User.objects.get(email=email)
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # Security: Silent fail, but for now returned message says "If account exists..."
+                return Response({'message': 'If account exists, reset code sent.'})
+
             otp = generate_otp()
-            user.reset_otp = otp # Consider hashing this in future too!
+            # In a real app, hash this!
+            user.reset_otp = otp 
             user.reset_otp_created_at = timezone.now()
             user.save()
+            
+            # Send email
             send_password_reset_email(user, otp)
-        except User.DoesNotExist:
-            pass # Silent fail security
-        return Response({'message': 'If account exists, reset code sent.'})
+            
+            return Response({'message': 'If account exists, reset code sent.'})
+
+        except Exception as e:
+            print(f"Password Reset Error: {e}")
+            # Prevent 502 by catching SMTP errors
+            return Response({'error': f'Server Error: {str(e)}'}, status=500)
 
 class VerifyResetOTPView(APIView):
     permission_classes = [permissions.AllowAny]
