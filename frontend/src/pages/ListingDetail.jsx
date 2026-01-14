@@ -135,14 +135,14 @@ const ListingDetail = () => {
                 </div>
 
                 {/* Seller Info */}
-                <div className="card p-6 mb-6">
-                    <h2 className="text-xl font-semibold mb-3">Seller Information</h2>
+                <div className="card p-6">
+                    <h2 className="text-xl font-semibold mb-4">Seller Information</h2>
                     <p><strong>Name:</strong> {listing.user?.username}</p>
                     {listing.user?.phone_number && (
-                        <p><strong>Phone:</strong> {listing.user.phone_number}</p>
+                        <p><strong>Phone:</strong> {listing.user?.phone_number}</p>
                     )}
                     {listing.user?.location && (
-                        <p><strong>Location:</strong> {listing.user.location}</p>
+                        <p><strong>Location:</strong> {listing.user?.location}</p>
                     )}
                 </div>
 

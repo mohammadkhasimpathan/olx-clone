@@ -121,7 +121,7 @@ const AdminUsers = () => {
                                         <button
                                             onClick={() => handleSuspend(user)}
                                             className="text-red-600 hover:text-red-800"
-                                            disabled={user.is_staff}
+                                            disabled={user?.is_staff}
                                         >
                                             Suspend
                                         </button>

@@ -14,8 +14,8 @@ const AdminRoute = ({ children }) => {
         return <Navigate to="/login" replace />;
     }
 
-    // Check if user is staff (admin)
-    if (!user.is_staff) {
+    // Check if user is staff (admin) - SAFE property access
+    if (!user?.is_staff) {
         // Non-admin users redirected to home
         return <Navigate to="/" replace />;
     }
