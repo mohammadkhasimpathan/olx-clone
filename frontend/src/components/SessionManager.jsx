@@ -1,60 +1,62 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useUI } from '../context/UIContext';
+import { authService } from '../services/authService';
 
 /**
  * SessionManager Component
- * Monitors JWT token expiration and handles automatic logout
- * Checks token validity every minute
+ * 
+ * Handles automatic token refresh and session validation.
+ * CRITICAL: Does NOT throw errors - uses safe redirects instead.
  */
 const SessionManager = () => {
-    const { user, logout } = useAuth();
-    const { showWarning } = useUI();
+    const { logout } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!user) return;
-
         // Check token expiration every minute
         const interval = setInterval(() => {
-            const token = localStorage.getItem('access_token');
+            const token = authService.getAccessToken();
 
+            // If no token, do nothing (user not logged in)
             if (!token) {
-                // Token is missing, session expired
-                showWarning('Your session has expired. Please login again.');
-                logout();
-                navigate('/login');
                 return;
             }
 
-            // Optional: Decode JWT and check expiration time
-            try {
-                const tokenData = JSON.parse(atob(token.split('.')[1]));
-                const expirationTime = tokenData.exp * 1000; // Convert to milliseconds
-                const currentTime = Date.now();
-                const timeUntilExpiration = expirationTime - currentTime;
+            // Check if token is expired
+            const isExpired = authService.isTokenExpired(token);
 
-                // If token expires in less than 2 minutes, show warning
-                if (timeUntilExpiration < 2 * 60 * 1000 && timeUntilExpiration > 0) {
-                    showWarning('Your session will expire soon. Please save your work.');
-                }
+            if (isExpired) {
+                // Token expired - try to refresh
+                const refreshToken = authService.getRefreshToken();
 
-                // If token is expired, logout
-                if (timeUntilExpiration <= 0) {
-                    showWarning('Your session has expired. Please login again.');
+                if (refreshToken && !authService.isTokenExpired(refreshToken)) {
+                    // Refresh token is valid - attempt refresh
+                    authService.refreshAccessToken()
+                        .then(() => {
+                            console.log('Token refreshed successfully');
+                        })
+                        .catch((error) => {
+                            console.error('Token refresh failed:', error);
+                            // Refresh failed - logout and redirect
+                            logout();
+                            navigate('/login', { replace: true });
+                        });
+                } else {
+                    // Refresh token also expired - logout and redirect
+                    console.log('Session expired - logging out');
                     logout();
-                    navigate('/login');
+                    navigate('/login', { replace: true });
                 }
-            } catch (error) {
-                console.error('Error checking token expiration:', error);
             }
         }, 60000); // Check every minute
 
+        // Cleanup interval on unmount
         return () => clearInterval(interval);
-    }, [user, logout, navigate, showWarning]);
+    }, [logout, navigate]);
 
-    return null; // This component doesn't render anything
+    // This component doesn't render anything
+    return null;
 };
 
 export default SessionManager;
