@@ -230,8 +230,7 @@ if not DEBUG:
     )
 
 
-# Logging Configuration
-import os
+# Logging Configuration (Production-safe)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -246,19 +245,14 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-            'formatter': 'verbose',
-        },
     },
     'root': {
-        'handlers': ['console', 'file'] if not DEBUG else ['console'],
+        'handlers': ['console'],
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'] if not DEBUG else ['console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
