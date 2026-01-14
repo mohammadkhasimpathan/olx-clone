@@ -3,8 +3,8 @@ services:
   - type: web
     name: olx-clone-backend
     env: python
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py ensure_superuser"
-    startCommand: "gunicorn olx_backend.wsgi:application"
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "python manage.py migrate && python manage.py ensure_superuser && gunicorn olx_backend.wsgi:application"
     envVars:
       - key: DEBUG
         value: false
