@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 
 const Register = () => {
-    const [step, setStep] = useState(1); // 1 = registration form, 2 = OTP verification
+    const [step, setStep] = useState(1); // 1 = form, 2 = otp
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -16,39 +16,47 @@ const Register = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(0);
+    const [showPassword, setShowPassword] = useState(false);
+
     const navigate = useNavigate();
 
+    // Icons
+    const EyeIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    );
+
+    const EyeSlashIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+        </svg>
+    );
+
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
-        // Validation
         if (formData.password !== formData.confirm_password) {
             setError('Passwords do not match');
             return;
         }
-
         if (formData.password.length < 6) {
             setError('Password must be at least 6 characters');
             return;
         }
 
         setLoading(true);
-
         try {
             await authService.registerRequest(formData);
-            // Move to OTP verification step
             setStep(2);
         } catch (err) {
-            const errorData = err.response?.data;
-            setError(errorData?.error || 'Registration failed. Please try again.');
+            setError(err.response?.data?.error || 'Registration failed');
         } finally {
             setLoading(false);
         }
@@ -57,25 +65,16 @@ const Register = () => {
     const handleOTPSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
         if (!otp || otp.length !== 6) {
             setError('Please enter a valid 6-digit OTP');
             return;
         }
-
         setLoading(true);
-
         try {
             await authService.verifyOTP(formData.email, otp);
-            // Success - redirect to login
-            navigate('/login', {
-                state: {
-                    message: 'Account created successfully! Please login with your credentials.'
-                }
-            });
+            navigate('/login', { state: { message: 'Account created successfully! Please login.' } });
         } catch (err) {
-            const errorData = err.response?.data;
-            setError(errorData?.error || 'OTP verification failed');
+            setError(err.response?.data?.error || 'OTP verification failed');
         } finally {
             setLoading(false);
         }
@@ -83,13 +82,10 @@ const Register = () => {
 
     const handleResendOTP = async () => {
         if (resendCooldown > 0) return;
-
         setError('');
         setLoading(true);
-
         try {
             await authService.resendOTP(formData.email);
-            // Start 60-second cooldown
             setResendCooldown(60);
             const timer = setInterval(() => {
                 setResendCooldown((prev) => {
@@ -101,207 +97,193 @@ const Register = () => {
                 });
             }, 1000);
         } catch (err) {
-            const errorData = err.response?.data;
-            setError(errorData?.error || 'Failed to resend OTP');
+            setError('Failed to resend OTP');
         } finally {
             setLoading(false);
         }
     };
 
-    // Step 1: Registration Form
-    if (step === 1) {
-        return (
-            <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[calc(100vh-200px)]">
-                <div className="card w-full max-w-md p-8">
-                    <h2 className="text-3xl font-bold text-center mb-2">Create Account</h2>
-                    <p className="text-gray-600 text-center mb-8">Join OLX Clone to start buying and selling</p>
+    return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="w-full max-w-[420px] slide-up">
 
+                {/* Header Logo Area could go here */}
+
+                <div className="card p-8">
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                            {step === 1 ? 'Create an account' : 'Verify Email'}
+                        </h1>
+                        <p className="text-gray-500 text-sm">
+                            {step === 1
+                                ? 'Join our marketplace today'
+                                : `We sent a code to ${formData.email}`
+                            }
+                        </p>
+                    </div>
+
+                    {/* Error Alert */}
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 text-center">
-                            {error}
+                        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0">
+                                <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                            </svg>
+                            <p className="text-sm text-red-700 font-medium">{error}</p>
                         </div>
                     )}
 
-                    <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                        <div className="form-group">
-                            <label htmlFor="username" className="block text-gray-700 font-medium mb-1">Username *</label>
-                            <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                className="input-field"
-                                value={formData.username}
-                                onChange={handleChange}
-                                placeholder="Choose a username"
-                                required
-                                autoComplete="username"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="email" className="block text-gray-700 font-medium mb-1">Email *</label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                className="input-field"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="your.email@example.com"
-                                required
-                                autoComplete="email"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="form-group">
-                                <label htmlFor="password" className="block text-gray-700 font-medium mb-1">Password *</label>
+                    {step === 1 ? (
+                        <form onSubmit={handleRegisterSubmit} className="space-y-5">
+                            <div className="input-group">
+                                <label className="input-label">Username</label>
                                 <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    className="input-field"
-                                    value={formData.password}
+                                    type="text"
+                                    name="username"
+                                    value={formData.username}
                                     onChange={handleChange}
-                                    placeholder="Min 6 chars"
+                                    className="input-field"
+                                    placeholder="johndoe123"
                                     required
-                                    autoComplete="new-password"
-                                    minLength={6}
                                 />
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="confirm_password" className="block text-gray-700 font-medium mb-1">Confirm *</label>
+                            <div className="input-group">
+                                <label className="input-label">Email Address</label>
                                 <input
-                                    type="password"
-                                    id="confirm_password"
-                                    name="confirm_password"
-                                    className="input-field"
-                                    value={formData.confirm_password}
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
                                     onChange={handleChange}
-                                    placeholder="Re-enter"
+                                    className="input-field"
+                                    placeholder="name@example.com"
                                     required
-                                    autoComplete="new-password"
-                                    minLength={6}
                                 />
                             </div>
-                        </div>
 
-                        <div className="form-group">
-                            <label htmlFor="phone_number" className="block text-gray-700 font-medium mb-1">Phone Number</label>
-                            <input
-                                type="tel"
-                                id="phone_number"
-                                name="phone_number"
-                                className="input-field"
-                                value={formData.phone_number}
-                                onChange={handleChange}
-                                placeholder="Your phone number"
-                                autoComplete="tel"
-                            />
-                        </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="input-group">
+                                    <label className="input-label">Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            className="input-field pr-10"
+                                            placeholder="••••••"
+                                            required
+                                            minLength={6}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        >
+                                            {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                                        </button>
+                                    </div>
+                                </div>
 
-                        <div className="form-group">
-                            <label htmlFor="location" className="block text-gray-700 font-medium mb-1">Location</label>
-                            <input
-                                type="text"
-                                id="location"
-                                name="location"
-                                className="input-field"
-                                value={formData.location}
-                                onChange={handleChange}
-                                placeholder="Your city or area"
-                                autoComplete="address-level2"
-                            />
-                        </div>
+                                <div className="input-group">
+                                    <label className="input-label">Confirm</label>
+                                    <input
+                                        type="password"
+                                        name="confirm_password"
+                                        value={formData.confirm_password}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="••••••"
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                            </div>
 
-                        <button
-                            type="submit"
-                            className="btn-primary w-full mt-2"
-                            disabled={loading}
-                        >
-                            {loading ? 'Sending OTP...' : 'Continue'}
-                        </button>
-                    </form>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="input-group">
+                                    <label className="input-label">Phone</label>
+                                    <input
+                                        type="tel"
+                                        name="phone_number"
+                                        value={formData.phone_number}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="+1 234..."
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label className="input-label">Location</label>
+                                    <input
+                                        type="text"
+                                        name="location"
+                                        value={formData.location}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        placeholder="City..."
+                                    />
+                                </div>
+                            </div>
 
-                    <div className="mt-6 text-center text-gray-600">
-                        <p>
-                            Already have an account?{' '}
-                            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-semibold">
-                                Login here
-                            </Link>
-                        </p>
-                    </div>
+                            <button type="submit" className="btn-primary mt-2" disabled={loading}>
+                                {loading ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Creating Account...
+                                    </>
+                                ) : 'Continue'}
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleOTPSubmit} className="space-y-6">
+                            <div className="input-group">
+                                <label className="input-label text-center w-full">Enter 6-digit Code</label>
+                                <input
+                                    type="text"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    className="input-field text-center text-3xl font-mono tracking-[0.5em] h-16"
+                                    placeholder="000000"
+                                    autoFocus
+                                    maxLength={6}
+                                    required
+                                />
+                                <p className="text-center text-xs text-gray-500 mt-2">Code expires in 5 minutes</p>
+                            </div>
+
+                            <button type="submit" className="btn-primary" disabled={loading || otp.length !== 6}>
+                                {loading ? 'Verifying...' : 'Verify Email'}
+                            </button>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleResendOTP}
+                                    disabled={resendCooldown > 0 || loading}
+                                    className={`text-sm font-medium ${resendCooldown > 0 ? 'text-gray-400' : 'text-primary-600 hover:text-primary-700'}`}
+                                >
+                                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    className="text-sm text-gray-500 hover:text-gray-700"
+                                >
+                                    Change email address
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </div>
-            </div>
-        );
-    }
 
-    // Step 2: OTP Verification
-    return (
-        <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[calc(100vh-200px)]">
-            <div className="card w-full max-w-md p-8">
-                <h2 className="text-3xl font-bold text-center mb-2">Verify Your Email</h2>
-                <p className="text-gray-600 text-center mb-8">
-                    We've sent a 6-digit code to <strong className="text-gray-900">{formData.email}</strong>
+                <p className="text-center mt-8 text-gray-600 text-sm">
+                    Already have an account?{' '}
+                    <Link to="/login" className="auth-link">Login here</Link>
                 </p>
-
-                {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 text-center">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleOTPSubmit} className="space-y-6">
-                    <div className="form-group text-center">
-                        <label htmlFor="otp" className="block text-gray-700 font-medium mb-2">Enter OTP</label>
-                        <input
-                            type="text"
-                            id="otp"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="000000"
-                            required
-                            maxLength={6}
-                            pattern="\d{6}"
-                            className="input-field text-center text-2xl tracking-[0.5em] font-mono h-16 w-3/4 mx-auto"
-                            autoComplete="one-time-code"
-                            autoFocus
-                        />
-                        <div className="text-sm text-gray-500 mt-2">Code expires in 5 minutes</div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="btn-primary w-full"
-                        disabled={loading || otp.length !== 6}
-                    >
-                        {loading ? 'Verifying...' : 'Verify & Create Account'}
-                    </button>
-                </form>
-
-                <div className="mt-8 text-center space-y-4">
-                    <p className="text-gray-600">
-                        Didn't receive the code?{' '}
-                        <button
-                            type="button"
-                            onClick={handleResendOTP}
-                            disabled={resendCooldown > 0 || loading}
-                            className={`font-semibold ${resendCooldown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-primary-600 hover:text-primary-700'}`}
-                        >
-                            {resendCooldown > 0
-                                ? `Resend in ${resendCooldown}s`
-                                : 'Resend OTP'}
-                        </button>
-                    </p>
-                    <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center justify-center w-full"
-                    >
-                        ← Back to registration
-                    </button>
-                </div>
             </div>
         </div>
     );
