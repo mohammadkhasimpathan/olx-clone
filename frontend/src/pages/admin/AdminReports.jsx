@@ -73,7 +73,7 @@ const AdminReports = () => {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">Reports Review</h1>
-            <p className="text-gray-600 mb-4">{reports.length} reports total</p>
+            <p className="text-gray-600 mb-4">{Array.isArray(reports) ? reports.length : 0} reports total</p>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">

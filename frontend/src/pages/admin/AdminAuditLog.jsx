@@ -49,7 +49,7 @@ const AdminAuditLog = () => {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">Audit Log</h1>
-            <p className="text-gray-600 mb-4">{auditLog.length} actions logged (Read-only)</p>
+            <p className="text-gray-600 mb-4">{Array.isArray(auditLog) ? auditLog.length : 0} actions logged (Read-only)</p>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">

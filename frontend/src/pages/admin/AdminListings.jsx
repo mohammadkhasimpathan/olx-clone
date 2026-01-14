@@ -98,7 +98,7 @@ const AdminListings = () => {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">Listings Moderation</h1>
-            <p className="text-gray-600 mb-4">{listings.length} listings total</p>
+            <p className="text-gray-600 mb-4">{Array.isArray(listings) ? listings.length : 0} listings total</p>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">

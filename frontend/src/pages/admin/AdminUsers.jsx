@@ -86,7 +86,7 @@ const AdminUsers = () => {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">User Management</h1>
-            <p className="text-gray-600 mb-4">{users.length} users total</p>
+            <p className="text-gray-600 mb-4">{Array.isArray(users) ? users.length : 0} users total</p>
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">

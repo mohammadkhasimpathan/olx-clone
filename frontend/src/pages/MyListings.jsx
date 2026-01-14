@@ -55,7 +55,7 @@ const MyListings = () => {
                 </Link>
             </div>
 
-            {listings.length === 0 ? (
+            {!Array.isArray(listings) || listings.length === 0 ? (
                 <EmptyState
                     icon={
                         <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
