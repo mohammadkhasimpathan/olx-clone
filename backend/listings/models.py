@@ -180,3 +180,58 @@ class ListingReport(models.Model):
     
     def __str__(self):
         return f"Report for {self.listing.title} by {self.reported_by.username}"
+
+
+class AdminAction(models.Model):
+    """
+    Audit log for admin actions.
+    Tracks all moderation activities for accountability and transparency.
+    """
+    ACTION_CHOICES = [
+        ('delete_listing', 'Deleted Listing'),
+        ('deactivate_listing', 'Deactivated Listing'),
+        ('activate_listing', 'Activated Listing'),
+        ('suspend_user', 'Suspended User'),
+        ('activate_user', 'Activated User'),
+        ('resolve_report', 'Resolved Report'),
+        ('dismiss_report', 'Dismissed Report'),
+    ]
+    
+    admin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='admin_actions'
+    )
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='actions_received'
+    )
+    target_listing = models.ForeignKey(
+        Listing,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    target_report = models.ForeignKey(
+        ListingReport,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['admin', '-created_at']),
+            models.Index(fields=['-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.admin.username} - {self.get_action_display()}"
+

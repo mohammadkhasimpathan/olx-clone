@@ -3,11 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Count, Q
-from .models import Listing, ListingReport
+from .models import Listing, ListingReport, AdminAction
 from .admin_serializers import ListingReportSerializer, ListingReportDetailSerializer, AdminActionSerializer
 from .admin_permissions import IsAdminUser
 from listings.serializers import ListingSerializer
-from users.models import User, AdminAction
+from users.models import User
 from users.serializers import UserSerializer
 
 

@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import ListingReport
-from users.models import AdminAction
+from .models import ListingReport, AdminAction
 from listings.serializers import ListingListSerializer
 from users.serializers import UserSerializer
 
