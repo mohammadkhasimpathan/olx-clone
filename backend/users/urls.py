@@ -1,11 +1,11 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    UserRegistrationView, 
+    RegistrationRequestView,
+    VerifyOTPView,
+    ResendOTPView,
     UserProfileView,
     CustomTokenObtainPairView,
-    VerifyEmailView,
-    ResendOTPView,
     RequestPasswordResetView,
     VerifyResetOTPView,
     ResetPasswordView
@@ -15,13 +15,11 @@ app_name = 'users'
 
 urlpatterns = [
     # Authentication endpoints
-    path('register/', UserRegistrationView.as_view(), name='register'),
+    path('register-request/', RegistrationRequestView.as_view(), name='register_request'),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # Email verification endpoints
-    path('verify-email/', VerifyEmailView.as_view(), name='verify_email'),
-    path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
     
     # Password reset endpoints
     path('request-password-reset/', RequestPasswordResetView.as_view(), name='request_password_reset'),

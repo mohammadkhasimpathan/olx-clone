@@ -1,9 +1,21 @@
 import api from './api';
 
 export const authService = {
-    // Register new user
-    register: async (userData) => {
-        const response = await api.post('/users/register/', userData);
+    // Step 1: Request registration and send OTP
+    registerRequest: async (userData) => {
+        const response = await api.post('/users/register-request/', userData);
+        return response.data;
+    },
+
+    // Step 2: Verify OTP and create user account
+    verifyOTP: async (email, otp) => {
+        const response = await api.post('/users/verify-otp/', { email, otp });
+        return response.data;
+    },
+
+    // Resend OTP
+    resendOTP: async (email) => {
+        const response = await api.post('/users/resend-otp/', { email });
         return response.data;
     },
 
@@ -40,18 +52,6 @@ export const authService = {
     // Check if user is authenticated
     isAuthenticated: () => {
         return !!localStorage.getItem('access_token');
-    },
-
-    // Email verification
-    verifyEmail: async (email, otp) => {
-        const response = await api.post('/users/verify-email/', { email, otp });
-        return response.data;
-    },
-
-    // Resend OTP
-    resendOTP: async (email) => {
-        const response = await api.post('/users/resend-otp/', { email });
-        return response.data;
     },
 
     // Request password reset

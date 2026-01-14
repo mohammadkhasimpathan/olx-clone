@@ -195,6 +195,8 @@ SIMPLE_JWT = {
 
 
 # CORS Configuration - PRODUCTION
+# Explicit origins - no wildcards
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:5173,https://olx-clone-frontend-vgcs.onrender.com',
@@ -202,28 +204,9 @@ CORS_ALLOWED_ORIGINS = config(
 )
 CORS_ALLOW_CREDENTIALS = True
 
-# Allow all necessary headers for JWT authentication
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',  # CRITICAL for JWT Bearer tokens
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# Allow all necessary methods
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
+# Allow all headers and methods for simplicity
+CORS_ALLOW_HEADERS = ['*']
+CORS_ALLOW_METHODS = ['*']
 
 
 # Email Configuration

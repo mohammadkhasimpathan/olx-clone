@@ -3,10 +3,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password, check_password
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from datetime import timedelta
+from .models import PendingRegistration
 from .serializers import UserRegistrationSerializer, UserProfileSerializer
 from .utils import (
     generate_otp, 
@@ -19,223 +21,245 @@ from .utils import (
 User = get_user_model()
 
 
-
 @method_decorator(csrf_exempt, name='dispatch')
-class CustomTokenObtainPairView(TokenObtainPairView):
+class RegistrationRequestView(APIView):
     """
-    Custom login view that checks email verification before issuing tokens.
-    CSRF exempt - uses JWT authentication, not session cookies.
-    """
-    permission_classes = [permissions.AllowAny]
-    
-    def post(self, request, *args, **kwargs):
-        # Get username/email from request
-        username = request.data.get('username')
-        
-        if username:
-            try:
-                # Try to find user by username or email
-                user = User.objects.filter(username=username).first() or \
-                       User.objects.filter(email=username).first()
-                
-                if user and not user.email_verified:
-                    return Response({
-                        'error': 'Please verify your email before logging in.',
-                        'email': user.email,
-                        'requires_verification': True
-                    }, status=status.HTTP_403_FORBIDDEN)
-            except User.DoesNotExist:
-                pass  # Let the parent class handle invalid credentials
-        
-        # Proceed with normal login if email is verified
-        return super().post(request, *args, **kwargs)
-
-
-
-class UserRegistrationView(generics.CreateAPIView):
-    """
-    API endpoint for user registration.
-    Public endpoint - no authentication required.
-    Sends verification email with OTP after registration.
-    """
-    queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [permissions.AllowAny]
-    
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        
-        # Generate OTP and send verification email
-        otp = generate_otp()
-        user.email_otp = otp
-        user.email_otp_created_at = timezone.now()
-        user.save()
-        
-        # Send OTP email
-        send_verification_email(user, otp)
-        
-        return Response({
-            'message': 'Registration successful! Please check your email for verification code.',
-            'email': user.email
-        }, status=status.HTTP_201_CREATED)
-
-
-
-class VerifyEmailView(APIView):
-    """
-    API endpoint for email verification with OTP.
-    Public endpoint - no authentication required.
+    Step 1 of registration: Receive registration data and send OTP.
+    User account is NOT created yet - stored in PendingRegistration.
     """
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
-        email = request.data.get('email')
-        otp = request.data.get('otp')
+        # Extract and validate required fields
+        username = request.data.get('username', '').strip()
+        email = request.data.get('email', '').strip().lower()
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+        phone_number = request.data.get('phone_number', '').strip()
+        location = request.data.get('location', '').strip()
+        
+        # Validation
+        if not all([username, email, password, confirm_password]):
+            return Response({
+                'error': 'Username, email, password, and password confirmation are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if password != confirm_password:
+            return Response({
+                'error': 'Passwords do not match'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(password) < 6:
+            return Response({
+                'error': 'Password must be at least 6 characters'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if username or email already exists in User model
+        if User.objects.filter(username=username).exists():
+            return Response({
+                'error': 'Username already taken'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(email=email).exists():
+            return Response({
+                'error': 'Email already registered'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Generate OTP
+        otp = generate_otp()
+        otp_hash = make_password(otp)
+        
+        # Store or update pending registration
+        pending, created = PendingRegistration.objects.update_or_create(
+            email=email,
+            defaults={
+                'username': username,
+                'password_hash': make_password(password),
+                'phone_number': phone_number,
+                'location': location,
+                'otp_hash': otp_hash,
+                'otp_created_at': timezone.now(),
+                'otp_attempts': 0,
+                'last_resend_at': None,
+            }
+        )
+        
+        # Send OTP email
+        send_verification_email(email, otp)
+        
+        return Response({
+            'message': 'OTP sent to your email. Valid for 5 minutes.',
+            'email': email
+        }, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class VerifyOTPView(APIView):
+    """
+    Step 2 of registration: Verify OTP and create user account.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        otp = request.data.get('otp', '').strip()
         
         if not email or not otp:
             return Response({
                 'error': 'Email and OTP are required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Find pending registration
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
+            pending = PendingRegistration.objects.get(email=email)
+        except PendingRegistration.DoesNotExist:
             return Response({
-                'error': 'Invalid email or OTP'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'error': 'No pending registration found for this email'
+            }, status=status.HTTP_404_NOT_FOUND)
         
-        # Check if already verified
-        if user.email_verified:
-            return Response({
-                'message': 'Email already verified'
-            }, status=status.HTTP_200_OK)
-        
-        # Validate OTP
-        if not user.email_otp or user.email_otp != otp:
-            return Response({
-                'error': 'Invalid OTP'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check OTP expiration
-        if not is_otp_valid(user.email_otp_created_at):
+        # Check OTP expiry (5 minutes)
+        expiry_time = pending.otp_created_at + timedelta(minutes=5)
+        if timezone.now() > expiry_time:
             return Response({
                 'error': 'OTP has expired. Please request a new one.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Mark email as verified and clear OTP
-        user.email_verified = True
-        user.email_otp = None
-        user.email_otp_created_at = None
-        user.save()
+        # Check maximum attempts (3)
+        if pending.otp_attempts >= 3:
+            pending.delete()  # Delete after max attempts exceeded
+            return Response({
+                'error': 'Maximum verification attempts exceeded. Please register again.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response({
-            'message': 'Email verified successfully! You can now login.'
-        }, status=status.HTTP_200_OK)
+        # Verify OTP hash
+        if not check_password(otp, pending.otp_hash):
+            pending.otp_attempts += 1
+            pending.save()
+            remaining_attempts = 3 - pending.otp_attempts
+            return Response({
+                'error': f'Invalid OTP. {remaining_attempts} attempt(s) remaining.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # OTP verified successfully - create user account
+        try:
+            user = User.objects.create(
+                username=pending.username,
+                email=pending.email,
+                phone_number=pending.phone_number,
+                location=pending.location,
+                email_verified=True  # Mark as verified
+            )
+            user.password = pending.password_hash  # Use pre-hashed password
+            user.save()
+            
+            # Delete pending registration after successful account creation
+            pending.delete()
+            
+            return Response({
+                'message': 'Account created successfully! You can now login.',
+                'username': user.username,
+                'email': user.email
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Failed to create account: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ResendOTPView(APIView):
     """
-    API endpoint for resending verification OTP.
-    Rate limited to prevent abuse.
-    CSRF exempt - public endpoint for email verification.
+    Resend OTP with 60-second cooldown to prevent abuse.
     """
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
-        email = request.data.get('email')
+        email = request.data.get('email', '').strip().lower()
         
         if not email:
             return Response({
                 'error': 'Email is required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Find pending registration
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            # Don't reveal if email exists
+            pending = PendingRegistration.objects.get(email=email)
+        except PendingRegistration.DoesNotExist:
             return Response({
-                'message': 'If the email exists, a new OTP has been sent.'
-            }, status=status.HTTP_200_OK)
+                'error': 'No pending registration found for this email'
+            }, status=status.HTTP_404_NOT_FOUND)
         
-        # Check if already verified
-        if user.email_verified:
-            return Response({
-                'message': 'Email already verified'
-            }, status=status.HTTP_200_OK)
-        
-        # Rate limiting: Allow resend only after 1 minute
-        if user.email_otp_created_at:
-            time_since_last_otp = timezone.now() - user.email_otp_created_at
-            if time_since_last_otp < timedelta(minutes=1):
-                remaining_seconds = 60 - int(time_since_last_otp.total_seconds())
+        # Check cooldown period (60 seconds)
+        if pending.last_resend_at:
+            cooldown_end = pending.last_resend_at + timedelta(seconds=60)
+            if timezone.now() < cooldown_end:
+                remaining_seconds = (cooldown_end - timezone.now()).seconds
                 return Response({
                     'error': f'Please wait {remaining_seconds} seconds before requesting a new OTP'
                 }, status=status.HTTP_429_TOO_MANY_REQUESTS)
         
-        # Generate new OTP and send email
+        # Generate new OTP
         otp = generate_otp()
-        user.email_otp = otp
-        user.email_otp_created_at = timezone.now()
-        user.save()
+        pending.otp_hash = make_password(otp)
+        pending.otp_created_at = timezone.now()
+        pending.otp_attempts = 0  # Reset attempts
+        pending.last_resend_at = timezone.now()
+        pending.save()
         
-        send_verification_email(user.email, otp)
+        # Send new OTP email
+        send_verification_email(email, otp)
         
         return Response({
-            'message': 'A new verification code has been sent to your email.'
+            'message': 'New OTP sent to your email. Valid for 5 minutes.'
         }, status=status.HTTP_200_OK)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Simple JWT login - no additional checks needed.
+    """
+    permission_classes = [permissions.AllowAny]
+
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    """
+    Get or update user profile.
+    """
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_object(self):
+        return self.request.user
+
+
+# Password reset views (existing functionality)
 class RequestPasswordResetView(APIView):
-    """
-    API endpoint for requesting password reset.
-    Sends OTP to user's email.
-    """
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         email = request.data.get('email')
         
         if not email:
-            return Response({
-                'error': 'Email is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             user = User.objects.get(email=email)
-            
-            # Rate limiting: Allow reset request only after 1 minute
-            if user.reset_otp_created_at:
-                time_since_last_otp = timezone.now() - user.reset_otp_created_at
-                if time_since_last_otp < timedelta(minutes=1):
-                    remaining_seconds = 60 - int(time_since_last_otp.total_seconds())
-                    return Response({
-                        'error': f'Please wait {remaining_seconds} seconds before requesting another reset'
-                    }, status=status.HTTP_429_TOO_MANY_REQUESTS)
-            
-            # Generate OTP and send email
-            otp = generate_otp()
-            user.reset_otp = otp
-            user.reset_otp_created_at = timezone.now()
-            user.save()
-            
-            send_password_reset_email(user, otp)
         except User.DoesNotExist:
-            pass  # Don't reveal if email exists
+            return Response({'message': 'If the email exists, a reset code has been sent.'}, status=status.HTTP_200_OK)
         
-        # Always return success to prevent email enumeration
-        return Response({
-            'message': 'If the email exists, password reset instructions have been sent.'
-        }, status=status.HTTP_200_OK)
+        otp = generate_otp()
+        user.reset_otp = otp
+        user.reset_otp_created_at = timezone.now()
+        user.save()
+        
+        send_password_reset_email(user, otp)
+        
+        return Response({'message': 'Password reset code sent to your email.'}, status=status.HTTP_200_OK)
 
 
 class VerifyResetOTPView(APIView):
-    """
-    API endpoint for verifying password reset OTP.
-    Returns success if OTP is valid.
-    """
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
@@ -243,98 +267,49 @@ class VerifyResetOTPView(APIView):
         otp = request.data.get('otp')
         
         if not email or not otp:
-            return Response({
-                'error': 'Email and OTP are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({
-                'error': 'Invalid email or OTP'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid email or OTP'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Validate OTP
         if not user.reset_otp or user.reset_otp != otp:
-            return Response({
-                'error': 'Invalid OTP'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check OTP expiration
         if not is_otp_valid(user.reset_otp_created_at):
-            return Response({
-                'error': 'OTP has expired. Please request a new one.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response({
-            'message': 'OTP verified. You can now reset your password.',
-            'email': email  # Return email for next step
-        }, status=status.HTTP_200_OK)
+        return Response({'message': 'OTP verified. You can now reset your password.'}, status=status.HTTP_200_OK)
 
 
 class ResetPasswordView(APIView):
-    """
-    API endpoint for resetting password after OTP verification.
-    """
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         email = request.data.get('email')
         otp = request.data.get('otp')
         new_password = request.data.get('new_password')
-        confirm_password = request.data.get('confirm_password')
         
-        if not all([email, otp, new_password, confirm_password]):
-            return Response({
-                'error': 'All fields are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        if new_password != confirm_password:
-            return Response({
-                'error': 'Passwords do not match'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if not all([email, otp, new_password]):
+            return Response({'error': 'Email, OTP, and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({
-                'error': 'Invalid request'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Validate OTP one more time
         if not user.reset_otp or user.reset_otp != otp:
-            return Response({
-                'error': 'Invalid OTP'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check OTP expiration
         if not is_otp_valid(user.reset_otp_created_at):
-            return Response({
-                'error': 'OTP has expired. Please request a new one.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Reset password
         user.set_password(new_password)
         user.reset_otp = None
         user.reset_otp_created_at = None
         user.save()
         
-        # Send confirmation email
         send_password_reset_success_email(user)
         
-        return Response({
-            'message': 'Password reset successful! You can now login with your new password.'
-        }, status=status.HTTP_200_OK)
-
-
-class UserProfileView(generics.RetrieveUpdateAPIView):
-    """
-    API endpoint for viewing and updating user profile.
-    Requires authentication.
-    """
-    serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_object(self):
-        """Return the current authenticated user"""
-        return self.request.user
+        return Response({'message': 'Password reset successful'}, status=status.HTTP_200_OK)
