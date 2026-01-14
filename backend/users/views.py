@@ -51,6 +51,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return super().post(request, *args, **kwargs)
 
 
+
 class UserRegistrationView(generics.CreateAPIView):
     """
     API endpoint for user registration.
@@ -66,14 +67,20 @@ class UserRegistrationView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
+        # Generate OTP and send verification email
+        otp = generate_otp()
+        user.email_otp = otp
+        user.email_otp_created_at = timezone.now()
+        user.save()
+        
+        # Send OTP email
+        send_verification_email(user, otp)
+        
         return Response({
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
-            },
-            'message': 'Registration successful! Please check your email for verification code.'
+            'message': 'Registration successful! Please check your email for verification code.',
+            'email': user.email
         }, status=status.HTTP_201_CREATED)
+
 
 
 class VerifyEmailView(APIView):

@@ -40,20 +40,29 @@ def is_otp_valid(created_at, timeout_minutes=5):
     return timezone.now() < expiration_time
 
 
-def send_verification_email(user, otp):
+
+def send_verification_email(user_or_email, otp):
     """
     Send email verification OTP to user.
     
     Args:
-        user: User instance
+        user_or_email: User instance OR email string
         otp (str): OTP code to send
     
     Returns:
         bool: True if email sent successfully, False otherwise
     """
+    # Handle both User object and email string
+    if isinstance(user_or_email, str):
+        email = user_or_email
+        username = email.split('@')[0]  # Use email prefix as fallback
+    else:
+        email = user_or_email.email
+        username = user_or_email.username
+    
     subject = 'Verify Your Email - OLX Clone'
     message = f"""
-Hello {user.username},
+Hello {username},
 
 Thank you for registering with OLX Clone!
 
@@ -72,13 +81,14 @@ OLX Clone Team
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
+            recipient_list=[email],
             fail_silently=False,
         )
         return True
     except Exception as e:
         print(f"Error sending verification email: {e}")
         return False
+
 
 
 def send_password_reset_email(user, otp):
