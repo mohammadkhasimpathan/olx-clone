@@ -222,12 +222,13 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    # CSRF trusted origins for production
-    CSRF_TRUSTED_ORIGINS = config(
-        'CSRF_TRUSTED_ORIGINS',
-        default='https://yourdomain.com',
-        cast=Csv()
-    )
+
+# CSRF trusted origins (for production)
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://olx-clone-backend-6ho8.onrender.com,https://olx-clone-frontend-vgcs.onrender.com',
+    cast=Csv()
+)
 
 
 # Logging Configuration (Production-safe)

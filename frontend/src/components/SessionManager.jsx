@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { authService } from '../services/authService';
 
 /**
  * SessionManager Component
  * 
  * Handles automatic token refresh and session validation.
- * CRITICAL: Does NOT use navigate() - just calls logout() which handles redirect.
+ * PRODUCTION-SAFE: Uses localStorage directly, no external dependencies.
  */
 const SessionManager = () => {
     const { logout } = useAuth();
@@ -14,38 +13,30 @@ const SessionManager = () => {
     useEffect(() => {
         // Check token expiration every minute
         const interval = setInterval(() => {
-            const token = authService.getAccessToken();
+            // Get token directly from localStorage (SAFE)
+            const token = localStorage.getItem('access_token');
 
             // If no token, do nothing (user not logged in)
             if (!token) {
                 return;
             }
 
-            // Check if token is expired
-            const isExpired = authService.isTokenExpired(token);
+            // Check if token is expired by decoding JWT
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expirationTime = payload.exp * 1000; // Convert to milliseconds
+                const currentTime = Date.now();
 
-            if (isExpired) {
-                // Token expired - try to refresh
-                const refreshToken = authService.getRefreshToken();
-
-                if (refreshToken && !authService.isTokenExpired(refreshToken)) {
-                    // Refresh token is valid - attempt refresh
-                    authService.refreshAccessToken()
-                        .then(() => {
-                            console.log('Token refreshed successfully');
-                        })
-                        .catch((error) => {
-                            console.error('Token refresh failed:', error);
-                            // Refresh failed - just logout
-                            // The app will redirect to login via ProtectedRoute
-                            logout();
-                        });
-                } else {
-                    // Refresh token also expired - just logout
+                // If token is expired
+                if (currentTime >= expirationTime) {
                     console.log('Session expired - logging out');
-                    // The app will redirect to login via ProtectedRoute
+                    // Just logout - ProtectedRoute will handle redirect
                     logout();
                 }
+            } catch (error) {
+                // If token is malformed, logout
+                console.error('Invalid token format:', error);
+                logout();
             }
         }, 60000); // Check every minute
 
