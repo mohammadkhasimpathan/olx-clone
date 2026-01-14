@@ -113,7 +113,7 @@ const AdminListings = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {listings.map((listing) => (
+                        {Array.isArray(listings) && listings.map((listing) => (
                             <tr key={listing.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">{listing.id}</td>
                                 <td className="px-6 py-4 text-sm">{listing.title}</td>

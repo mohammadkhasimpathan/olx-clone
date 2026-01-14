@@ -63,29 +63,27 @@ const Home = () => {
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 />
 
-                <div className="flex gap-4 flex-wrap">
-                    <select
-                        className="input-field flex-1"
-                        value={filters.category}
-                        onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                    >
-                        <option value="">All Categories</option>
-                        {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                            </option>
-                        ))}
-                    </select>
+                <select
+                    className="input-field flex-1"
+                    value={filters.category}
+                    onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                >
+                    <option value="">All Categories</option>
+                    {Array.isArray(categories) && categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                        </option>
+                    ))}
+                </select>
 
-                    {hasActiveFilters && (
-                        <button
-                            onClick={() => setFilters({ search: '', category: '', is_sold: 'false' })}
-                            className="btn-secondary"
-                        >
-                            Clear Filters
-                        </button>
-                    )}
-                </div>
+                {hasActiveFilters && (
+                    <button
+                        onClick={() => setFilters({ search: '', category: '', is_sold: 'false' })}
+                        className="btn-secondary"
+                    >
+                        Clear Filters
+                    </button>
+                )}
             </div>
 
             {/* Loading State */}
@@ -109,22 +107,16 @@ const Home = () => {
                         </svg>
                     }
                     title={hasActiveFilters ? "No listings found" : "No listings yet"}
-                    description={
-                        hasActiveFilters
-                            ? "Try adjusting your search or filters to find what you're looking for."
-                            : "Be the first to post a listing and start selling!"
-                    }
-                    actionLabel={hasActiveFilters ? "Clear Filters" : "Post an Ad"}
-                    onAction={() => hasActiveFilters ? setFilters({ search: '', category: '', is_sold: 'false' }) : navigate('/listings/create')}
+                    description={hasActiveFilters ? "Try adjusting your search or filters." : "Be the first to create a listing!"}
                 />
             ) : (
                 /* Listings Grid */
                 <>
                     <div className="mb-4 text-gray-600">
-                        {listings.length} listing{listings.length !== 1 ? 's' : ''} found
+                        {Array.isArray(listings) ? listings.length : 0} listing{listings?.length !== 1 ? 's' : ''} found
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {listings.map((listing) => (
+                        {Array.isArray(listings) && listings.map((listing) => (
                             <Link
                                 key={listing.id}
                                 to={`/listings/${listing.id}`}
@@ -159,6 +151,33 @@ const Home = () => {
                 </>
             )}
         </div>
+            {/* Loading State */ }
+    {
+        loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                    <div key={i} className="card p-4 animate-pulse">
+                        <div className="h-48 bg-gray-200 rounded-lg mb-3"></div>
+                        <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-8 bg-gray-200 rounded w-24 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-32"></div>
+                    </div>
+                ))}
+            </div>
+        ) : listings.length === 0 ? (
+            /* Empty State */
+            <EmptyState
+                icon={
+                    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                }
+                title={hasActiveFilters ? "No listings found" : "No listings yet"}
+                description={
+            </>
+        )
+    }
+        </div >
     );
 };
 

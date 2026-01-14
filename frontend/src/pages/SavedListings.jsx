@@ -75,7 +75,7 @@ const SavedListings = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {savedListings.map((savedItem) => {
+                {Array.isArray(savedListings) && savedListings.map((savedItem) => {
                     const listing = savedItem.listing;
                     return (
                         <div key={savedItem.id} className="card overflow-hidden hover:shadow-lg transition-shadow group">

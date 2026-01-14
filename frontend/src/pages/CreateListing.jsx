@@ -122,7 +122,7 @@ const CreateListing = () => {
                             required
                         >
                             <option value="">Select a category</option>
-                            {categories.map((cat) => (
+                            {Array.isArray(categories) && categories.map((cat) => (
                                 <option key={cat.id} value={cat.id}>
                                     {cat.name}
                                 </option>

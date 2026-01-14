@@ -64,7 +64,7 @@ const AdminAuditLog = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {auditLog.map((log) => (
+                        {Array.isArray(auditLog) && auditLog.map((log) => (
                             <tr key={log.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">{log.id}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{log.admin_username}</td>
