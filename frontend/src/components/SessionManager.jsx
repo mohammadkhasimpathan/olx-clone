@@ -8,6 +8,7 @@ import { authService } from '../services/authService';
  * 
  * Handles automatic token refresh and session validation.
  * CRITICAL: Does NOT throw errors - uses safe redirects instead.
+ * CRITICAL: Wraps navigate() in setTimeout to avoid router errors during render.
  */
 const SessionManager = () => {
     const { logout } = useAuth();
@@ -39,14 +40,20 @@ const SessionManager = () => {
                         .catch((error) => {
                             console.error('Token refresh failed:', error);
                             // Refresh failed - logout and redirect
+                            // CRITICAL: Use setTimeout to avoid router errors during render
                             logout();
-                            navigate('/login', { replace: true });
+                            setTimeout(() => {
+                                navigate('/login', { replace: true });
+                            }, 0);
                         });
                 } else {
                     // Refresh token also expired - logout and redirect
                     console.log('Session expired - logging out');
+                    // CRITICAL: Use setTimeout to avoid router errors during render
                     logout();
-                    navigate('/login', { replace: true });
+                    setTimeout(() => {
+                        navigate('/login', { replace: true });
+                    }, 0);
                 }
             }
         }, 60000); // Check every minute
