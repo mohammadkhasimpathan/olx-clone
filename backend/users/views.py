@@ -234,7 +234,6 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 class RequestPasswordResetView(APIView):
     permission_classes = [permissions.AllowAny]
     def post(self, request):
-    def post(self, request):
         email = request.data.get('email')
         if not email: return Response({'error': 'Email required'}, 400)
         try:
