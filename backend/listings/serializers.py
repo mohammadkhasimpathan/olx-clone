@@ -3,7 +3,7 @@ from .models import Listing, ListingImage, SavedListing, ListingReport
 from categories.serializers import CategorySerializer
 from users.serializers import UserSerializer
 from django.core.exceptions import ValidationError as DjangoValidationError
-import imghdr
+from PIL import Image
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
@@ -11,30 +11,40 @@ class ListingImageSerializer(serializers.ModelSerializer):
     Serializer for listing images with validation.
     Validates file type and size.
     """
+
     class Meta:
         model = ListingImage
         fields = ['id', 'image', 'uploaded_at']
         read_only_fields = ['id', 'uploaded_at']
-    
+
     def validate_image(self, value):
         """
         Validate image file type and size.
         Only allow common image formats and max 5MB.
         """
+
         # Validate file size (5MB max)
         if value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Image file size cannot exceed 5MB")
-        
-        # Validate file type
+            raise serializers.ValidationError(
+                "Image file size cannot exceed 5MB"
+            )
+
+        # Validate image integrity & format using Pillow
+        try:
+            img = Image.open(value)
+            img.verify()  # verifies image without loading it fully
+            format = img.format.lower()
+        except Exception:
+            raise serializers.ValidationError("Invalid or corrupted image file")
+
         valid_formats = ['jpeg', 'jpg', 'png', 'gif', 'webp']
-        file_type = imghdr.what(value)
-        
-        if file_type not in valid_formats:
+        if format not in valid_formats:
             raise serializers.ValidationError(
                 f"Invalid image format. Allowed formats: {', '.join(valid_formats)}"
             )
-        
+
         return value
+
 
 
 class ListingSerializer(serializers.ModelSerializer):
