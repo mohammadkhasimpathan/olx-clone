@@ -1,19 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-      },
-      '/media': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-      },
-    },
+    host: true,
+    port: 5173,
+  },
+  build: {
+    // Enable source maps in production for debugging
+    // This allows ErrorBoundary to show real file names and line numbers
+    sourcemap: true,
   },
 })

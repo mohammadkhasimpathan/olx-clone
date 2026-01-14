@@ -1,13 +1,17 @@
 import React from 'react';
 
 /**
- * Global Error Boundary Component
+ * Enhanced Global Error Boundary Component
  * 
  * Catches all React render errors and prevents white screen crashes.
- * Shows a fallback UI and logs detailed error information to console.
+ * Shows a fallback UI and logs FULL error details to console.
  * 
- * CRITICAL: This is a production safety feature.
- * Do NOT remove error logging or simplify error handling.
+ * CRITICAL PRODUCTION DEBUGGING FEATURES:
+ * - Logs full error object (not just message)
+ * - Handles non-Error objects (thrown strings, objects, etc.)
+ * - Shows error.stack and componentStack
+ * - Displays String(error) for maximum visibility
+ * - Never allows white screen
  */
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -16,41 +20,76 @@ class ErrorBoundary extends React.Component {
             hasError: false,
             error: null,
             errorInfo: null,
+            errorString: '',
         };
     }
 
     /**
      * Update state when error is caught
-     * This enables the fallback UI to render
+     * Handles both Error objects and non-Error throws
      */
     static getDerivedStateFromError(error) {
+        // Convert error to string for display (handles non-Error objects)
+        let errorString = 'Unknown error';
+        try {
+            errorString = String(error);
+        } catch (e) {
+            errorString = 'Error could not be stringified';
+        }
+
         return {
             hasError: true,
             error: error,
+            errorString: errorString,
         };
     }
 
     /**
-     * Log error details to console for debugging
+     * Log FULL error details to console for debugging
      * CRITICAL: This is the ONLY way to debug minified production errors
      */
     componentDidCatch(error, errorInfo) {
-        // Log to console (visible in browser DevTools)
-        console.error('🚨 React Error Boundary Caught an Error:');
-        console.error('Error:', error);
+        // Log EVERYTHING to console (visible in browser DevTools)
+        console.group('🚨 React Error Boundary Caught an Error');
+
+        // Log the raw error object
+        console.error('Full Error Object:', error);
+
+        // Log error as string (handles non-Error objects)
+        console.error('Error as String:', String(error));
+
+        // Log error properties
+        console.error('Error Type:', typeof error);
+        console.error('Error Constructor:', error?.constructor?.name);
         console.error('Error Message:', error?.message);
+        console.error('Error Name:', error?.name);
+
+        // Log stack traces
         console.error('Error Stack:', error?.stack);
         console.error('Component Stack:', errorInfo?.componentStack);
 
+        // Log all error properties (for debugging non-standard errors)
+        if (error && typeof error === 'object') {
+            console.error('Error Keys:', Object.keys(error));
+            console.error('Error Properties:', error);
+        }
+
+        console.groupEnd();
+
         // Store error info in state for display
         this.setState({
-            error: error,
             errorInfo: errorInfo,
         });
 
         // Optional: Send to error tracking service (e.g., Sentry)
         // if (window.Sentry) {
-        //     window.Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+        //     window.Sentry.captureException(error, { 
+        //         contexts: { 
+        //             react: { 
+        //                 componentStack: errorInfo.componentStack 
+        //             } 
+        //         } 
+        //     });
         // }
     }
 
@@ -62,13 +101,40 @@ class ErrorBoundary extends React.Component {
             hasError: false,
             error: null,
             errorInfo: null,
+            errorString: '',
         });
         // Reload the page to reset application state
         window.location.reload();
     };
 
+    /**
+     * Get error display text (handles all error types)
+     */
+    getErrorDisplay = () => {
+        const { error, errorString } = this.state;
+
+        // Try multiple ways to get error text
+        if (error?.message) {
+            return error.message;
+        }
+        if (errorString && errorString !== 'Unknown error') {
+            return errorString;
+        }
+        if (error?.toString && typeof error.toString === 'function') {
+            try {
+                return error.toString();
+            } catch (e) {
+                // Ignore
+            }
+        }
+        return 'An unexpected error occurred';
+    };
+
     render() {
         if (this.state.hasError) {
+            const errorDisplay = this.getErrorDisplay();
+            const { error, errorInfo } = this.state;
+
             // Fallback UI - shown instead of white screen
             return (
                 <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -99,37 +165,54 @@ class ErrorBoundary extends React.Component {
 
                         {/* Error Description */}
                         <p className="text-gray-600 text-center mb-6">
-                            We're sorry, but something unexpected happened. The error has been logged and our team will investigate.
+                            We're sorry, but something unexpected happened. The error has been logged to the console.
                         </p>
 
-                        {/* Error Details (Development/Debug) */}
-                        {this.state.error && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                                <p className="text-sm font-semibold text-red-800 mb-2">
-                                    Error Details:
+                        {/* Error Details - ALWAYS VISIBLE */}
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <p className="text-sm font-semibold text-red-800 mb-2">
+                                Error Details:
+                            </p>
+                            <p className="text-sm text-red-700 font-mono break-all whitespace-pre-wrap">
+                                {errorDisplay}
+                            </p>
+                            {error?.name && (
+                                <p className="text-xs text-red-600 mt-2">
+                                    Type: {error.name}
                                 </p>
-                                <p className="text-sm text-red-700 font-mono break-all">
-                                    {this.state.error.toString()}
-                                </p>
-                                {this.state.error.message && (
-                                    <p className="text-xs text-red-600 mt-2">
-                                        Message: {this.state.error.message}
-                                    </p>
-                                )}
-                            </div>
-                        )}
+                            )}
+                        </div>
 
-                        {/* Component Stack (Development/Debug) */}
-                        {this.state.errorInfo?.componentStack && (
-                            <details className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-                                <summary className="text-sm font-semibold text-gray-700 cursor-pointer">
-                                    Component Stack (Click to expand)
+                        {/* Error Stack - Expandable */}
+                        {error?.stack && (
+                            <details className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                                <summary className="text-sm font-semibold text-gray-700 cursor-pointer hover:text-gray-900">
+                                    Error Stack Trace (Click to expand)
                                 </summary>
-                                <pre className="text-xs text-gray-600 mt-2 overflow-auto max-h-40">
-                                    {this.state.errorInfo.componentStack}
+                                <pre className="text-xs text-gray-600 mt-2 overflow-auto max-h-60 whitespace-pre-wrap break-all">
+                                    {error.stack}
                                 </pre>
                             </details>
                         )}
+
+                        {/* Component Stack - Expandable */}
+                        {errorInfo?.componentStack && (
+                            <details className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                                <summary className="text-sm font-semibold text-gray-700 cursor-pointer hover:text-gray-900">
+                                    Component Stack (Click to expand)
+                                </summary>
+                                <pre className="text-xs text-gray-600 mt-2 overflow-auto max-h-60 whitespace-pre-wrap">
+                                    {errorInfo.componentStack}
+                                </pre>
+                            </details>
+                        )}
+
+                        {/* Debug Info */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                            <p className="text-xs text-blue-800">
+                                <strong>Debug Tip:</strong> Open browser DevTools (F12) → Console tab to see full error details with source maps.
+                            </p>
+                        </div>
 
                         {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
