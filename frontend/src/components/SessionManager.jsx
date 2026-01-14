@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 
@@ -7,12 +6,10 @@ import { authService } from '../services/authService';
  * SessionManager Component
  * 
  * Handles automatic token refresh and session validation.
- * CRITICAL: Does NOT throw errors - uses safe redirects instead.
- * CRITICAL: Wraps navigate() in setTimeout to avoid router errors during render.
+ * CRITICAL: Does NOT use navigate() - just calls logout() which handles redirect.
  */
 const SessionManager = () => {
     const { logout } = useAuth();
-    const navigate = useNavigate();
 
     useEffect(() => {
         // Check token expiration every minute
@@ -39,28 +36,22 @@ const SessionManager = () => {
                         })
                         .catch((error) => {
                             console.error('Token refresh failed:', error);
-                            // Refresh failed - logout and redirect
-                            // CRITICAL: Use setTimeout to avoid router errors during render
+                            // Refresh failed - just logout
+                            // The app will redirect to login via ProtectedRoute
                             logout();
-                            setTimeout(() => {
-                                navigate('/login', { replace: true });
-                            }, 0);
                         });
                 } else {
-                    // Refresh token also expired - logout and redirect
+                    // Refresh token also expired - just logout
                     console.log('Session expired - logging out');
-                    // CRITICAL: Use setTimeout to avoid router errors during render
+                    // The app will redirect to login via ProtectedRoute
                     logout();
-                    setTimeout(() => {
-                        navigate('/login', { replace: true });
-                    }, 0);
                 }
             }
         }, 60000); // Check every minute
 
         // Cleanup interval on unmount
         return () => clearInterval(interval);
-    }, [logout, navigate]);
+    }, [logout]);
 
     // This component doesn't render anything
     return null;
