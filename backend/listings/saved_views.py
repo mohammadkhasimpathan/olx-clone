@@ -1,52 +1,67 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import status
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import action
-from .models import SavedListing
+from rest_framework.permissions import IsAuthenticated
+from .models import SavedListing, Listing
 from .serializers import SavedListingSerializer
 
 
-class SavedListingViewSet(viewsets.ModelViewSet):
+class SavedListingListView(APIView):
     """
-    API endpoint for managing saved listings (wishlist).
+    GET /api/listings/saved/
+    - List all saved listings for the authenticated user
     
-    Allowed methods:
-    - GET /api/listings/saved/ - List user's saved listings
-    - POST /api/listings/saved/ - Save a listing (requires listing_id in body)
-    - DELETE /api/listings/saved/{id}/ - Remove saved listing
+    POST /api/listings/saved/
+    - Add a listing to wishlist
+    - Body: {"listing_id": <id>}
     """
-    serializer_class = SavedListingSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ['get', 'post', 'delete', 'head', 'options']  # Explicitly allow only these methods
+    permission_classes = [IsAuthenticated]
     
-    def get_queryset(self):
-        """Return only the current user's saved listings"""
-        return SavedListing.objects.filter(user=self.request.user).select_related(
+    def get(self, request):
+        """Get user's saved listings"""
+        saved_listings = SavedListing.objects.filter(
+            user=request.user
+        ).select_related(
             'listing',
             'listing__user',
             'listing__category'
         ).prefetch_related('listing__images')
+        
+        serializer = SavedListingSerializer(saved_listings, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
-    def perform_create(self, serializer):
-        """Save listing for current user"""
-        serializer.save(user=self.request.user)
+    def post(self, request):
+        """Add listing to wishlist"""
+        serializer = SavedListingSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SavedListingDetailView(APIView):
+    """
+    DELETE /api/listings/saved/<id>/
+    - Remove a saved listing from wishlist
+    """
+    permission_classes = [IsAuthenticated]
     
-    def create(self, request, *args, **kwargs):
-        """Create a saved listing"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED,
-            headers=headers
-        )
-    
-    def destroy(self, request, *args, **kwargs):
-        """Delete saved listing"""
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(
-            {'message': 'Listing removed from saved items'},
-            status=status.HTTP_204_NO_CONTENT
-        )
+    def delete(self, request, pk):
+        """Remove listing from wishlist"""
+        try:
+            saved_listing = SavedListing.objects.get(
+                id=pk,
+                user=request.user
+            )
+            saved_listing.delete()
+            return Response(
+                {'message': 'Listing removed from wishlist'},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except SavedListing.DoesNotExist:
+            return Response(
+                {'error': 'Saved listing not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
