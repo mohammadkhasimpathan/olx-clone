@@ -22,6 +22,5 @@ urlpatterns = [
     path('api/health/', lambda request: HttpResponse("OK", status=200)),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media files served by Cloudinary (not local filesystem)
+# No need for static() media serving in production
