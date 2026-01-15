@@ -1,15 +1,23 @@
 import api from './api';
 
 export const authService = {
-    // Step 1: Request registration and send OTP
-    registerRequest: async (userData) => {
-        const response = await api.post('/users/register-request/', userData);
+    // NEW OTP REGISTRATION FLOW
+
+    // Step 1: Send OTP to email
+    sendOTP: async (email) => {
+        const response = await api.post('/users/send-otp/', { email });
         return response.data;
     },
 
-    // Step 2: Verify OTP and create user account
+    // Step 2: Verify OTP (does NOT create user)
     verifyOTP: async (email, otp) => {
         const response = await api.post('/users/verify-otp/', { email, otp });
+        return response.data;
+    },
+
+    // Step 3: Complete registration (creates user account)
+    register: async (userData) => {
+        const response = await api.post('/users/register/', userData);
         return response.data;
     },
 

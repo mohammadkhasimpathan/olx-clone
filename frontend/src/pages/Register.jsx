@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 
 const Register = () => {
-    const [step, setStep] = useState(1); // 1 = form, 2 = otp
+    // Form data
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -12,13 +12,32 @@ const Register = () => {
         phone_number: '',
         location: '',
     });
-    const [otp, setOtp] = useState('');
-    const [error, setError] = useState('');
+
+    // OTP state
+    const [otpState, setOtpState] = useState({
+        sent: false,
+        verified: false,
+        otp: '',
+        cooldown: 0
+    });
+
+    // UI state
     const [loading, setLoading] = useState(false);
-    const [resendCooldown, setResendCooldown] = useState(0);
+    const [errors, setErrors] = useState({});
+    const [successMsg, setSuccessMsg] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
     const navigate = useNavigate();
+
+    // Cooldown timer
+    useEffect(() => {
+        if (otpState.cooldown > 0) {
+            const timer = setTimeout(() => {
+                setOtpState(prev => ({ ...prev, cooldown: prev.cooldown - 1 }));
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [otpState.cooldown]);
 
     // Icons
     const EyeIcon = () => (
@@ -36,68 +55,113 @@ const Register = () => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (errors[e.target.name]) {
+            setErrors({ ...errors, [e.target.name]: '' });
+        }
     };
 
-    const handleRegisterSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
+    // Email validation
+    const isEmailValid = (email) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
 
-        if (formData.password !== formData.confirm_password) {
-            setError('Passwords do not match');
-            return;
-        }
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters');
+    // Send OTP
+    const handleSendOTP = async () => {
+        if (!isEmailValid(formData.email)) {
+            setErrors({ email: 'Please enter a valid email' });
             return;
         }
 
         setLoading(true);
+        setErrors({});
+        setSuccessMsg('');
+
         try {
-            await authService.registerRequest(formData);
-            setStep(2);
+            await authService.sendOTP(formData.email);
+            setOtpState({ sent: true, verified: false, otp: '', cooldown: 60 });
+            setSuccessMsg('OTP sent! Check your email.');
         } catch (err) {
-            setError(err.response?.data?.error || 'Registration failed');
+            setErrors({ email: err.response?.data?.error || 'Failed to send OTP' });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleOTPSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        if (!otp || otp.length !== 6) {
-            setError('Please enter a valid 6-digit OTP');
+    // Verify OTP
+    const handleVerifyOTP = async () => {
+        if (otpState.otp.length !== 6) {
+            setErrors({ otp: 'Please enter 6-digit OTP' });
             return;
         }
+
         setLoading(true);
+        setErrors({});
+
         try {
-            await authService.verifyOTP(formData.email, otp);
-            navigate('/login', { state: { message: 'Account created successfully! Please login.' } });
+            await authService.verifyOTP(formData.email, otpState.otp);
+            setOtpState(prev => ({ ...prev, verified: true }));
+            setSuccessMsg('✅ Email verified! You can now register.');
+            setErrors({});
         } catch (err) {
-            setError(err.response?.data?.error || 'OTP verification failed');
+            setErrors({ otp: err.response?.data?.error || 'Invalid OTP' });
         } finally {
             setLoading(false);
         }
     };
 
+    // Resend OTP
     const handleResendOTP = async () => {
-        if (resendCooldown > 0) return;
-        setError('');
+        if (otpState.cooldown > 0) return;
+
         setLoading(true);
+        setErrors({});
+
         try {
             await authService.resendOTP(formData.email);
-            setResendCooldown(60);
-            const timer = setInterval(() => {
-                setResendCooldown((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(timer);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
+            setOtpState(prev => ({ ...prev, verified: false, otp: '', cooldown: 60 }));
+            setSuccessMsg('New OTP sent!');
         } catch (err) {
-            setError('Failed to resend OTP');
+            setErrors({ otp: err.response?.data?.error || 'Failed to resend OTP' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Register
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setErrors({});
+
+        if (!otpState.verified) {
+            setErrors({ general: 'Please verify your email first' });
+            return;
+        }
+
+        if (formData.password !== formData.confirm_password) {
+            setErrors({ confirm_password: 'Passwords do not match' });
+            return;
+        }
+
+        if (formData.password.length < 8) {
+            setErrors({ password: 'Password must be at least 8 characters' });
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            await authService.register(formData);
+            setSuccessMsg('✅ Registration successful! Redirecting...');
+            setTimeout(() => {
+                navigate('/login', { state: { message: 'Account created successfully! Please login.' } });
+            }, 2000);
+        } catch (err) {
+            const errorData = err.response?.data;
+            if (errorData?.error) {
+                setErrors({ general: errorData.error });
+            } else {
+                setErrors(errorData || { general: 'Registration failed' });
+            }
         } finally {
             setLoading(false);
         }
@@ -105,179 +169,214 @@ const Register = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="w-full max-w-[420px] slide-up">
-
-                {/* Header Logo Area could go here */}
-
+            <div className="w-full max-w-[480px] slide-up">
                 <div className="card p-8">
                     {/* Header */}
                     <div className="text-center mb-8">
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                            {step === 1 ? 'Create an account' : 'Verify Email'}
+                            Create Account
                         </h1>
                         <p className="text-gray-500 text-sm">
-                            {step === 1
-                                ? 'Join our marketplace today'
-                                : `We sent a code to ${formData.email}`
-                            }
+                            Join our marketplace today
                         </p>
                     </div>
 
+                    {/* Success Message */}
+                    {successMsg && (
+                        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0">
+                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                            </svg>
+                            <p className="text-sm text-green-700 font-medium">{successMsg}</p>
+                        </div>
+                    )}
+
                     {/* Error Alert */}
-                    {error && (
+                    {errors.general && (
                         <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0">
                                 <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
                             </svg>
-                            <p className="text-sm text-red-700 font-medium">{error}</p>
+                            <p className="text-sm text-red-700 font-medium">{errors.general}</p>
                         </div>
                     )}
 
-                    {step === 1 ? (
-                        <form onSubmit={handleRegisterSubmit} className="space-y-5">
-                            <div className="input-group">
-                                <label className="input-label">Username</label>
-                                <input
-                                    type="text"
-                                    name="username"
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    className="input-field"
-                                    placeholder="johndoe123"
-                                    required
-                                />
-                            </div>
+                    <form onSubmit={handleRegister} className="space-y-5">
+                        {/* Username */}
+                        <div className="input-group">
+                            <label className="input-label">Username</label>
+                            <input
+                                type="text"
+                                name="username"
+                                value={formData.username}
+                                onChange={handleChange}
+                                className="input-field"
+                                placeholder="johndoe123"
+                                required
+                            />
+                            {errors.username && <span className="text-red-500 text-sm mt-1">{errors.username}</span>}
+                        </div>
 
-                            <div className="input-group">
-                                <label className="input-label">Email Address</label>
+                        {/* Email with Send OTP */}
+                        <div className="input-group">
+                            <label className="input-label">Email Address</label>
+                            <div className="flex gap-2">
                                 <input
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    className="input-field"
+                                    className="input-field flex-1"
                                     placeholder="name@example.com"
+                                    disabled={otpState.sent}
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={handleSendOTP}
+                                    disabled={otpState.sent || loading || !isEmailValid(formData.email)}
+                                    className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                                >
+                                    {loading ? '...' : otpState.sent ? '✓ Sent' : 'Send OTP'}
+                                </button>
                             </div>
+                            {errors.email && <span className="text-red-500 text-sm mt-1">{errors.email}</span>}
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="input-group">
-                                    <label className="input-label">Password</label>
-                                    <div className="relative">
+                        {/* OTP Section */}
+                        {otpState.sent && !otpState.verified && (
+                            <div className="bg-gray-50 border-2 border-primary-200 rounded-xl p-4 space-y-3">
+                                <div className="bg-blue-50 text-blue-700 text-sm p-2 rounded text-center">
+                                    📧 OTP sent to <strong>{formData.email}</strong>
+                                </div>
+                                <div>
+                                    <label className="input-label text-center block">Enter 6-digit OTP</label>
+                                    <div className="flex gap-2">
                                         <input
-                                            type={showPassword ? "text" : "password"}
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleChange}
-                                            className="input-field pr-10"
-                                            placeholder="••••••"
-                                            required
-                                            minLength={6}
+                                            type="text"
+                                            value={otpState.otp}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                                setOtpState(prev => ({ ...prev, otp: val }));
+                                            }}
+                                            className="input-field flex-1 text-center text-2xl font-mono tracking-widest"
+                                            placeholder="000000"
+                                            maxLength="6"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            onClick={handleVerifyOTP}
+                                            disabled={loading || otpState.otp.length !== 6}
+                                            className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                                         >
-                                            {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                                            {loading ? 'Verifying...' : 'Verify'}
                                         </button>
                                     </div>
+                                    {errors.otp && <span className="text-red-500 text-sm mt-1 block">{errors.otp}</span>}
                                 </div>
-
-                                <div className="input-group">
-                                    <label className="input-label">Confirm</label>
-                                    <input
-                                        type="password"
-                                        name="confirm_password"
-                                        value={formData.confirm_password}
-                                        onChange={handleChange}
-                                        className="input-field"
-                                        placeholder="••••••"
-                                        required
-                                        minLength={6}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="input-group">
-                                    <label className="input-label">Phone</label>
-                                    <input
-                                        type="tel"
-                                        name="phone_number"
-                                        value={formData.phone_number}
-                                        onChange={handleChange}
-                                        className="input-field"
-                                        placeholder="+1 234..."
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label className="input-label">Location</label>
-                                    <input
-                                        type="text"
-                                        name="location"
-                                        value={formData.location}
-                                        onChange={handleChange}
-                                        className="input-field"
-                                        placeholder="City..."
-                                    />
-                                </div>
-                            </div>
-
-                            <button type="submit" className="btn-primary mt-2" disabled={loading}>
-                                {loading ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Creating Account...
-                                    </>
-                                ) : 'Continue'}
-                            </button>
-                        </form>
-                    ) : (
-                        <form onSubmit={handleOTPSubmit} className="space-y-6">
-                            <div className="input-group">
-                                <label className="input-label text-center w-full">Enter 6-digit Code</label>
-                                <input
-                                    type="text"
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                    className="input-field text-center text-3xl font-mono tracking-[0.5em] h-16"
-                                    placeholder="000000"
-                                    autoFocus
-                                    maxLength={6}
-                                    required
-                                />
-                                <p className="text-center text-xs text-gray-500 mt-2">Code expires in 5 minutes</p>
-                            </div>
-
-                            <button type="submit" className="btn-primary" disabled={loading || otp.length !== 6}>
-                                {loading ? 'Verifying...' : 'Verify Email'}
-                            </button>
-
-                            <div className="flex flex-col gap-3">
                                 <button
                                     type="button"
                                     onClick={handleResendOTP}
-                                    disabled={resendCooldown > 0 || loading}
-                                    className={`text-sm font-medium ${resendCooldown > 0 ? 'text-gray-400' : 'text-primary-600 hover:text-primary-700'}`}
+                                    disabled={otpState.cooldown > 0 || loading}
+                                    className="w-full text-sm font-medium text-primary-600 hover:text-primary-700 disabled:text-gray-400"
                                 >
-                                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(1)}
-                                    className="text-sm text-gray-500 hover:text-gray-700"
-                                >
-                                    Change email address
+                                    {otpState.cooldown > 0 ? `Resend in ${otpState.cooldown}s` : 'Resend OTP'}
                                 </button>
                             </div>
-                        </form>
-                    )}
+                        )}
+
+                        {/* Verified Badge */}
+                        {otpState.verified && (
+                            <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4 text-center text-green-700 font-bold">
+                                ✅ Email Verified
+                            </div>
+                        )}
+
+                        {/* Password */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="input-group">
+                                <label className="input-label">Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        className="input-field pr-10"
+                                        placeholder="••••••••"
+                                        required
+                                        minLength={8}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    >
+                                        {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                                    </button>
+                                </div>
+                                {errors.password && <span className="text-red-500 text-sm mt-1">{errors.password}</span>}
+                            </div>
+
+                            <div className="input-group">
+                                <label className="input-label">Confirm</label>
+                                <input
+                                    type="password"
+                                    name="confirm_password"
+                                    value={formData.confirm_password}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    placeholder="••••••••"
+                                    required
+                                    minLength={8}
+                                />
+                                {errors.confirm_password && <span className="text-red-500 text-sm mt-1">{errors.confirm_password}</span>}
+                            </div>
+                        </div>
+
+                        {/* Phone & Location */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="input-group">
+                                <label className="input-label">Phone</label>
+                                <input
+                                    type="tel"
+                                    name="phone_number"
+                                    value={formData.phone_number}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    placeholder="+1 234..."
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Location</label>
+                                <input
+                                    type="text"
+                                    name="location"
+                                    value={formData.location}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    placeholder="City..."
+                                />
+                            </div>
+                        </div>
+
+                        {/* Register Button */}
+                        <button
+                            type="submit"
+                            className="btn-primary mt-2"
+                            disabled={!otpState.verified || loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Registering...
+                                </>
+                            ) : 'Register'}
+                        </button>
+                    </form>
                 </div>
 
                 <p className="text-center mt-8 text-gray-600 text-sm">
