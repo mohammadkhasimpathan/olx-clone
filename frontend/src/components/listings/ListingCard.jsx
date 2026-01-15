@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import SaveButton from './SaveButton';
+import { formatCurrency } from '../../utils/formatCurrency';
 
-const ListingCard = ({ listing }) => {
+const ListingCard = ({ listing, isSaved, onSaveChange }) => {
     return (
         <Link
             to={`/listings/${listing.id}`}
@@ -36,7 +37,11 @@ const ListingCard = ({ listing }) => {
 
                 {/* Save Button Overlay */}
                 <div className="absolute top-2 right-2 bg-white rounded-full shadow-md" onClick={(e) => e.preventDefault()}>
-                    <SaveButton listing={listing} />
+                    <SaveButton
+                        listing={listing}
+                        initialSaved={isSaved}
+                        onSaveChange={onSaveChange}
+                    />
                 </div>
 
                 {/* Sold Overlay */}
@@ -56,7 +61,7 @@ const ListingCard = ({ listing }) => {
                 </h3>
 
                 <p className="text-2xl font-bold text-primary-600 mb-2">
-                    ${parseFloat(listing.price).toLocaleString()}
+                    {formatCurrency(listing.price)}
                 </p>
 
                 <div className="flex items-center text-gray-600 text-sm">

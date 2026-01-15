@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { listingService } from '../services/listingService';
 import { categoryService } from '../services/categoryService';
+import { savedListingService } from '../services/savedListingService';
 import { useUI } from '../context/UIContext';
+import { useAuth } from '../context/AuthContext';
 import EmptyState from '../components/common/EmptyState';
 import ListingCard from '../components/listings/ListingCard';
 import FilterSidebar from '../components/listings/FilterSidebar';
@@ -13,6 +15,9 @@ const Home = () => {
     const [loading, setLoading] = useState(true);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [searchParams, setSearchParams] = useSearchParams();
+    const [savedListingIds, setSavedListingIds] = useState(new Set());
+
+    const { user } = useAuth();
 
     const [filters, setFilters] = useState({
         search: searchParams.get('search') || '',
@@ -56,11 +61,32 @@ const Home = () => {
         }
     }, [filters, setSearchParams]);
 
+    // Load wishlist on mount (if authenticated)
+    useEffect(() => {
+        if (user) {
+            loadWishlist();
+        }
+    }, [user]);
+
     // Load data when filters change
     useEffect(() => {
         loadData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters]);
+
+    const loadWishlist = async () => {
+        try {
+            const savedListings = await savedListingService.getSavedListings();
+            const savedIds = new Set(
+                (Array.isArray(savedListings) ? savedListings : savedListings.results || [])
+                    .map(item => item.listing?.id || item.listing_id)
+                    .filter(Boolean)
+            );
+            setSavedListingIds(savedIds);
+        } catch (error) {
+            console.error('Failed to load wishlist:', error);
+        }
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -211,59 +237,76 @@ const Home = () => {
                                 }
                             />
                         ) : (
-                            /* Listings Grid */
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {listings.map((listing) => (
-                                    <ListingCard key={listing.id} listing={listing} />
-                                ))}
-                            </div>
+                            {/* Listings Grid */ }
+                            < div className="grid-listings">
+                        {Array.isArray(listings) && listings.map((listing) => (
+                            <ListingCard
+                                key={listing.id}
+                                listing={listing}
+                                isSaved={savedListingIds.has(listing.id)}
+                                onSaveChange={(saved, listingId) => {
+                                    setSavedListingIds(prev => {
+                                        const newSet = new Set(prev);
+                                        if (saved) {
+                                            newSet.add(listing.id);
+                                        } else {
+                                            newSet.delete(listing.id);
+                                        }
+                                        return newSet;
+                                    });
+                                }}
+                            />
+                        ))}
+                    </div>                    </div>
                         )}
-                    </div>
+            </div>
+        </div>
+            </div >
+
+    {/* Mobile Filter Modal */ }
+{
+    showMobileFilters && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
+            <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
+                <div className="p-4 border-b flex items-center justify-between">
+                    <h2 className="text-xl font-bold">Filters</h2>
+                    <button
+                        onClick={() => setShowMobileFilters(false)}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        <svg
+                            className="w-6 h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
+                </div>
+                <div className="p-4">
+                    <FilterSidebar
+                        filters={filters}
+                        setFilters={setFilters}
+                        categories={categories}
+                    />
+                    <button
+                        onClick={() => setShowMobileFilters(false)}
+                        className="btn-primary w-full mt-4"
+                    >
+                        Apply Filters
+                    </button>
                 </div>
             </div>
-
-            {/* Mobile Filter Modal */}
-            {showMobileFilters && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
-                    <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
-                        <div className="p-4 border-b flex items-center justify-between">
-                            <h2 className="text-xl font-bold">Filters</h2>
-                            <button
-                                onClick={() => setShowMobileFilters(false)}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                <svg
-                                    className="w-6 h-6"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            <FilterSidebar
-                                filters={filters}
-                                setFilters={setFilters}
-                                categories={categories}
-                            />
-                            <button
-                                onClick={() => setShowMobileFilters(false)}
-                                className="btn-primary w-full mt-4"
-                            >
-                                Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
+    )
+}
+        </div >
     );
 };
 

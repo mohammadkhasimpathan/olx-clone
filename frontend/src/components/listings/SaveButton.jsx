@@ -1,17 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { savedListingService } from '../../services/savedListingService';
 import { useUI } from '../../context/UIContext';
 import { useAuth } from '../../context/AuthContext';
 
-const SaveButton = ({ listing, savedListingId: initialSavedId, onSaveChange }) => {
-    const [isSaved, setIsSaved] = useState(!!initialSavedId);
+const SaveButton = ({ listing, savedListingId: initialSavedId, initialSaved, onSaveChange }) => {
+    // Use initialSaved if provided, otherwise check initialSavedId
+    const [isSaved, setIsSaved] = useState(initialSaved !== undefined ? initialSaved : !!initialSavedId);
     const [savedListingId, setSavedListingId] = useState(initialSavedId);
     const [loading, setLoading] = useState(false);
     const { showSuccess, showError } = useUI();
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Update state when initialSaved changes (for wishlist sync)
+    useEffect(() => {
+        if (initialSaved !== undefined) {
+            setIsSaved(initialSaved);
+        }
+    }, [initialSaved]);
 
     const handleToggleSave = async (e) => {
         e.preventDefault();
@@ -74,8 +82,8 @@ const SaveButton = ({ listing, savedListingId: initialSavedId, onSaveChange }) =
             onClick={handleToggleSave}
             disabled={loading}
             className={`group relative p-2.5 rounded-full transition-all duration-200 ${isSaved
-                    ? 'text-red-500 bg-white hover:bg-red-50 shadow-sm'
-                    : 'text-gray-400 bg-white hover:text-red-500 hover:bg-gray-50 shadow-sm'
+                ? 'text-red-500 bg-white hover:bg-red-50 shadow-sm'
+                : 'text-gray-400 bg-white hover:text-red-500 hover:bg-gray-50 shadow-sm'
                 } ${loading ? 'opacity-60 cursor-wait' : 'hover:shadow-md active:scale-95'}`}
             title={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
             aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
