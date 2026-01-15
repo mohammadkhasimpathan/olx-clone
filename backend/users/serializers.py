@@ -7,13 +7,47 @@ from .utils import generate_otp, send_verification_email
 User = get_user_model()
 
 
-class RegistrationRequestSerializer(serializers.Serializer):
+class SendOTPSerializer(serializers.Serializer):
     """
-    Serializer for Step 1: Registration Request.
-    Validates input data but DOES NOT create a user.
+    Serializer for sending OTP to email.
+    Only validates email - no other registration data needed at this step.
     """
-    username = serializers.CharField(required=True)
     email = serializers.EmailField(required=True)
+
+    def validate_email(self, value):
+        """Check if email is already registered"""
+        value = value.strip().lower()
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already registered. Please login.")
+        return value
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    """
+    Serializer for verifying OTP.
+    Only verifies the OTP, does NOT create user account.
+    """
+    email = serializers.EmailField(required=True)
+    otp = serializers.CharField(required=True, max_length=6, min_length=6)
+
+    def validate_otp(self, value):
+        """Ensure OTP is 6 digits"""
+        if not value.isdigit():
+            raise serializers.ValidationError("OTP must be 6 digits.")
+        return value.strip()
+
+    def validate_email(self, value):
+        """Normalize email"""
+        return value.strip().lower()
+
+
+class RegisterSerializer(serializers.Serializer):
+    """
+    Serializer for final registration step.
+    Validates all user data and ensures OTP was verified.
+    """
+    email = serializers.EmailField(required=True)
+    username = serializers.CharField(required=True, min_length=3, max_length=150)
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -26,24 +60,26 @@ class RegistrationRequestSerializer(serializers.Serializer):
         style={'input_type': 'password'},
         label='Confirm Password'
     )
-    phone_number = serializers.CharField(required=False, allow_blank=True)
-    location = serializers.CharField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=15)
+    location = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
     def validate_email(self, value):
-        # Check User table
+        """Check if email is already registered"""
+        value = value.strip().lower()
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError("Email already registered.")
         return value
 
     def validate_username(self, value):
-        # Check User table
+        """Check if username is already taken"""
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("This username is already taken.")
+            raise serializers.ValidationError("Username already taken.")
         return value
 
     def validate(self, attrs):
+        """Validate password match"""
         if attrs['password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
         return attrs
 
 

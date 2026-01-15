@@ -15,9 +15,13 @@ class PendingRegistration(models.Model):
     
     # OTP fields (security features)
     otp_hash = models.CharField(max_length=128)  # Hashed OTP for security
-    otp_created_at = models.DateTimeField(auto_now_add=True)
+    otp_created_at = models.DateTimeField()  # Changed from auto_now_add to allow manual setting
     otp_attempts = models.IntegerField(default=0)  # Track failed attempts
     last_resend_at = models.DateTimeField(null=True, blank=True)  # For cooldown
+    
+    # Verification status
+    is_verified = models.BooleanField(default=False)  # Tracks if OTP was successfully verified
+    is_used = models.BooleanField(default=False)  # Prevents OTP reuse after registration
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -25,12 +29,13 @@ class PendingRegistration(models.Model):
         indexes = [
             models.Index(fields=['email']),
             models.Index(fields=['otp_created_at']),
+            models.Index(fields=['is_verified', 'is_used']),
         ]
         verbose_name = 'Pending Registration'
         verbose_name_plural = 'Pending Registrations'
     
     def __str__(self):
-        return f"{self.email} - Pending"
+        return f"{self.email} - {'Verified' if self.is_verified else 'Pending'}"
 
 
 class User(AbstractUser):
