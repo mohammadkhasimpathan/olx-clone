@@ -1,8 +1,13 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
     const { user, logout, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout(navigate);
+    };
 
     return (
         <nav className="bg-white shadow-md sticky top-0 z-50">
@@ -26,7 +31,7 @@ const Navbar = () => {
                                 <Link to="/profile" className="text-gray-700 hover:text-primary-600">
                                     {user?.username}
                                 </Link>
-                                <button onClick={logout} className="btn-secondary">
+                                <button onClick={handleLogout} className="btn-secondary">
                                     Logout
                                 </button>
                             </>

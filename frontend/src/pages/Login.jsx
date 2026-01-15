@@ -51,7 +51,12 @@ const Login = () => {
 
         try {
             await login(credentials);
-            navigate('/');
+
+            // Redirect back to where user came from, or home
+            const from = location.state?.from || '/';
+            const state = location.state?.revealContact ? { revealContact: true } : {};
+
+            navigate(from, { replace: true, state });
         } catch (err) {
             const errorData = err.response?.data;
             setError(errorData?.detail || errorData?.error || 'Invalid username or password');

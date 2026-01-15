@@ -32,9 +32,13 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    const logout = () => {
+    const logout = (navigate) => {
         authService.logout();
         setUser(null);
+        // Redirect to home page after logout
+        if (navigate) {
+            navigate('/');
+        }
     };
 
     const updateUser = async (profileData) => {
