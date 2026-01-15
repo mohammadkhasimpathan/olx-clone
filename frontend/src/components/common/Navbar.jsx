@@ -1,6 +1,7 @@
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../notifications/NotificationBell';
 
 const Navbar = () => {
     const { user, logout, isAuthenticated } = useAuth();
@@ -42,8 +43,8 @@ const Navbar = () => {
                                 <Link
                                     to="/saved-listings"
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isActive('/saved-listings')
-                                            ? 'text-primary-600 bg-primary-50'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                        ? 'text-primary-600 bg-primary-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
                                 >
                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -55,8 +56,8 @@ const Navbar = () => {
                                 <Link
                                     to="/my-listings"
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isActive('/my-listings')
-                                            ? 'text-primary-600 bg-primary-50'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                        ? 'text-primary-600 bg-primary-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,6 +75,9 @@ const Navbar = () => {
                                     </svg>
                                     Post Ad
                                 </Link>
+
+                                {/* Notification Bell */}
+                                <NotificationBell />
 
                                 {/* User Menu */}
                                 <div className="relative">

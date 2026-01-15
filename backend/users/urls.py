@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     SendOTPView,
@@ -11,8 +12,12 @@ from .views import (
     VerifyResetOTPView,
     ResetPasswordView
 )
+from .trust_views import TrustScoreViewSet
 
 app_name = 'users'
+
+router = DefaultRouter()
+router.register(r'trust-scores', TrustScoreViewSet, basename='trust-score')
 
 urlpatterns = [
     # New Registration Flow
@@ -32,4 +37,7 @@ urlpatterns = [
     
     # Profile endpoints
     path('profile/', UserProfileView.as_view(), name='profile'),
+    
+    # Trust score routes
+    path('', include(router.urls)),
 ]

@@ -1,17 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
+import { trustService } from '../services/trustService';
 import { useUI } from '../context/UIContext';
+import TrustBadge from '../components/trust/TrustBadge';
 
 const Profile = () => {
     const { user, updateUser } = useAuth();
     const { showSuccess, showError } = useUI();
     const [editMode, setEditMode] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [trustScore, setTrustScore] = useState(null);
     const [formData, setFormData] = useState({
         phone_number: user?.phone_number || '',
         location: user?.location || '',
     });
+
+    useEffect(() => {
+        loadTrustScore();
+    }, []);
+
+    const loadTrustScore = async () => {
+        try {
+            const score = await trustService.getMyTrustScore();
+            setTrustScore(score);
+        } catch (error) {
+            console.error('Failed to load trust score:', error);
+        }
+    };
 
     if (!user) return <div className="container mx-auto px-4 py-8">Loading...</div>;
 

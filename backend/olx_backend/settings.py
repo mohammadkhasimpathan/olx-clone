@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'users',
     'categories',
     'listings',
+    'chat',  # Messaging system
+    'notifications',  # Notification system
 ]
 
 MIDDLEWARE = [
@@ -173,22 +175,22 @@ AUTH_USER_MODEL = 'users.User'
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ),
-    'DEFAULT_FILTER_BACKENDS': (
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
-    ),
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     # Security: Don't expose exception details in production
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
-    # Rate limiting for production
+    # Rate Limiting / Throttling
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
@@ -196,6 +198,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',  # Anonymous users: 100 requests per hour
         'user': '1000/hour',  # Authenticated users: 1000 requests per hour
+        'chat_messages': '60/minute',  # Chat messages: 60 per minute (1 per second)
+        'chat_create': '10/minute',  # Create conversations: 10 per minute
+        'burst': '20/minute',  # Burst rate for sensitive operations
+        'login': '5/15min',  # Login attempts: 5 per 15 minutes (prevents brute force)
     }
 }
 
@@ -220,16 +226,20 @@ SIMPLE_JWT = {
 
 
 
-# CORS Configuration - PRODUCTION
-# Explicit origins - no wildcards
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,https://olx-clone-frontend-vgcs.onrender.com',
-    cast=Csv()
-)
-CORS_ALLOW_CREDENTIALS = True
+# CORS Configuration
+# For development, allow localhost. For production, set CORS_ALLOWED_ORIGINS in environment
+CORS_ALLOW_ALL_ORIGINS = config('DEBUG', default=False, cast=bool)  # Only in development
 
+# Production CORS settings
+if not CORS_ALLOW_ALL_ORIGINS:
+    CORS_ALLOWED_ORIGINS = config(
+        'CORS_ALLOWED_ORIGINS',
+        default='https://olx-clone.onrender.com,https://www.olx-clone.onrender.com',
+        cast=lambda v: [s.strip() for s in v.split(',')]
+    )
+
+# CORS settings for authentication
+CORS_ALLOW_CREDENTIALS = True
 # Allow all headers and methods for simplicity
 CORS_ALLOW_HEADERS = ['*']
 CORS_ALLOW_METHODS = ['*']

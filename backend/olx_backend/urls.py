@@ -14,6 +14,8 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/categories/', include('categories.urls')),
     path('api/listings/', include('listings.urls')),
+    path('api/chat/', include('chat.urls')),  # Chat & messaging
+    path('api/notifications/', include('notifications.urls')),  # Notifications
     
     # Admin API endpoints
     path('api/admin/', include('listings.admin_urls')),

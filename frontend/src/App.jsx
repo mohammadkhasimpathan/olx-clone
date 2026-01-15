@@ -18,6 +18,10 @@ import Profile from './pages/Profile';
 import MyListings from './pages/MyListings';
 import SavedListings from './pages/SavedListings';
 
+// Chat Pages
+import ChatList from './components/chat/ChatList';
+import ChatWindow from './components/chat/ChatWindow';
+
 // Admin Pages
 import AdminRoute from './components/admin/AdminRoute';
 import AdminLayout from './components/admin/AdminLayout';
@@ -92,6 +96,18 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+
+                  {/* Chat Routes */}
+                  <Route path="/messages" element={
+                    <ProtectedRoute>
+                      <ChatList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/chat/:id" element={
+                    <ProtectedRoute>
+                      <ChatWindow />
+                    </ProtectedRoute>
+                  } />
 
                   {/* Admin Routes */}
                   <Route

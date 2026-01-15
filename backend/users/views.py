@@ -365,11 +365,17 @@ class ResendOTPView(APIView):
 # AUTHENTICATION VIEWS
 # ============================================================================
 
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import CustomTokenObtainPairSerializer
+from .throttles import LoginThrottle
+
 @method_decorator(csrf_exempt, name='dispatch')
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Login View - Returns JWT tokens for authenticated users.
+    Custom login view with user details in response and rate limiting
     """
+    serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginThrottle]  # Prevent brute force attacks.
     permission_classes = [permissions.AllowAny]
 
 
