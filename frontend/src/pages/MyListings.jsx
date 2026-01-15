@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { listingService } from '../services/listingService';
 import { useUI } from '../context/UIContext';
 import EmptyState from '../components/common/EmptyState';
+import { formatCurrency } from '../utils/formatCurrency';
 
 const MyListings = () => {
     const [listings, setListings] = useState([]);
@@ -88,7 +89,7 @@ const MyListings = () => {
                             </Link>
                             <div className="p-4">
                                 <h3 className="font-semibold text-lg mb-2 line-clamp-1">{listing.title}</h3>
-                                <p className="text-2xl font-bold text-primary-600 mb-2">${listing.price}</p>
+                                <p className="text-2xl font-bold text-primary-600 mb-2">{formatCurrency(listing.price)}</p>
                                 <p className="text-gray-600 text-sm mb-3">{listing.location}</p>
 
                                 {listing.is_sold && (

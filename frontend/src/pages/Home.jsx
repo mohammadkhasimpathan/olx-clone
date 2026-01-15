@@ -237,75 +237,74 @@ const Home = () => {
                                 }
                             />
                         ) : (
-                            {/* Listings Grid */ }
-                            < div className="grid-listings">
-                        {Array.isArray(listings) && listings.map((listing) => (
-                            <ListingCard
-                                key={listing.id}
-                                listing={listing}
-                                isSaved={savedListingIds.has(listing.id)}
-                                onSaveChange={(saved, listingId) => {
-                                    setSavedListingIds(prev => {
-                                        const newSet = new Set(prev);
-                                        if (saved) {
-                                            newSet.add(listing.id);
-                                        } else {
-                                            newSet.delete(listing.id);
-                                        }
-                                        return newSet;
-                                    });
-                                }}
-                            />
-                        ))}
-                    </div>                    </div>
+                            <div className="grid-listings">
+                                {Array.isArray(listings) && listings.map((listing) => (
+                                    <ListingCard
+                                        key={listing.id}
+                                        listing={listing}
+                                        isSaved={savedListingIds.has(listing.id)}
+                                        onSaveChange={(saved, listingId) => {
+                                            setSavedListingIds(prev => {
+                                                const newSet = new Set(prev);
+                                                if (saved) {
+                                                    newSet.add(listing.id);
+                                                } else {
+                                                    newSet.delete(listing.id);
+                                                }
+                                                return newSet;
+                                            });
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         )}
+                    </div>
+                </div>
             </div>
-        </div>
-            </div >
 
-    {/* Mobile Filter Modal */ }
-{
-    showMobileFilters && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
-            <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
-                <div className="p-4 border-b flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Filters</h2>
-                    <button
-                        onClick={() => setShowMobileFilters(false)}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        <svg
-                            className="w-6 h-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
-                </div>
-                <div className="p-4">
-                    <FilterSidebar
-                        filters={filters}
-                        setFilters={setFilters}
-                        categories={categories}
-                    />
-                    <button
-                        onClick={() => setShowMobileFilters(false)}
-                        className="btn-primary w-full mt-4"
-                    >
-                        Apply Filters
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
+            {/* Mobile Filter Modal */}
+            {
+                showMobileFilters && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
+                        <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
+                            <div className="p-4 border-b flex items-center justify-between">
+                                <h2 className="text-xl font-bold">Filters</h2>
+                                <button
+                                    onClick={() => setShowMobileFilters(false)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <svg
+                                        className="w-6 h-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="p-4">
+                                <FilterSidebar
+                                    filters={filters}
+                                    setFilters={setFilters}
+                                    categories={categories}
+                                />
+                                <button
+                                    onClick={() => setShowMobileFilters(false)}
+                                    className="btn-primary w-full mt-4"
+                                >
+                                    Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div >
     );
 };

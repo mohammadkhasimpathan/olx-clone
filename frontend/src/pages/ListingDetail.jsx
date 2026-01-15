@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import ImageGallery from '../components/listings/ImageGallery';
 import SaveButton from '../components/listings/SaveButton';
+import { formatCurrency } from '../utils/formatCurrency';
 
 const ListingDetail = () => {
     const { id } = useParams();
@@ -182,7 +183,7 @@ const ListingDetail = () => {
                                         )}
                                     </div>
                                     <p className="text-4xl font-bold text-primary-600">
-                                        ${parseFloat(listing.price).toLocaleString()}
+                                        {formatCurrency(listing.price)}
                                     </p>
                                     {listing.is_sold && (
                                         <span className="inline-block bg-red-500 text-white px-3 py-1 rounded mt-3">

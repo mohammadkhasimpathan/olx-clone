@@ -4,6 +4,7 @@ import { savedListingService } from '../services/savedListingService';
 import { useUI } from '../context/UIContext';
 import SaveButton from '../components/listings/SaveButton';
 import EmptyState from '../components/common/EmptyState';
+import { formatCurrency } from '../utils/formatCurrency';
 
 const SavedListings = () => {
     const [savedListings, setSavedListings] = useState([]);
@@ -120,7 +121,7 @@ const SavedListings = () => {
                                         {listing.title}
                                     </h3>
                                     <p className="text-2xl font-bold text-primary-600 mb-2">
-                                        ${listing.price}
+                                        {formatCurrency(listing.price)}
                                     </p>
                                     <div className="flex items-center text-sm text-gray-600">
                                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
