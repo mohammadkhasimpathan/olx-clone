@@ -134,9 +134,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# WhiteNoise configuration for production static files
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# # WhiteNoise configuration for production static files
+# if not DEBUG:
+#     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (User uploads) - CLOUDINARY CONFIGURATION
 # Cloudinary for persistent media storage (Render FREE tier compatible)
@@ -151,8 +151,16 @@ CLOUDINARY_STORAGE = {
 }
 
 # Use Cloudinary for media files (not local filesystem)
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
+# DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# ADD THIS NEW BLOCK:
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 # Media URL (for compatibility)
 MEDIA_URL = '/media/'
 
