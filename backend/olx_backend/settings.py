@@ -201,7 +201,7 @@ REST_FRAMEWORK = {
         'chat_messages': '60/minute',  # Chat messages: 60 per minute (1 per second)
         'chat_create': '10/minute',  # Create conversations: 10 per minute
         'burst': '20/minute',  # Burst rate for sensitive operations
-        'login': '5/15min',  # Login attempts: 5 per 15 minutes (prevents brute force)
+        'login': '5/hour',  # Login attempts: 5 per hour (prevents brute force)
     }
 }
 
