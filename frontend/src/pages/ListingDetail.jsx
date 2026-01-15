@@ -4,6 +4,7 @@ import { listingService } from '../services/listingService';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import ImageGallery from '../components/listings/ImageGallery';
+import SaveButton from '../components/listings/SaveButton';
 
 const ListingDetail = () => {
     const { id } = useParams();
@@ -172,9 +173,14 @@ const ListingDetail = () => {
                             {/* Price Card */}
                             <div className="card p-6 sticky top-20">
                                 <div className="mb-4">
-                                    <h1 className="text-2xl font-bold mb-2 line-clamp-2">
-                                        {listing.title}
-                                    </h1>
+                                    <div className="flex items-start justify-between gap-4 mb-2">
+                                        <h1 className="text-2xl font-bold line-clamp-2 flex-1">
+                                            {listing.title}
+                                        </h1>
+                                        {!isOwner && (
+                                            <SaveButton listing={listing} />
+                                        )}
+                                    </div>
                                     <p className="text-4xl font-bold text-primary-600">
                                         ${parseFloat(listing.price).toLocaleString()}
                                     </p>

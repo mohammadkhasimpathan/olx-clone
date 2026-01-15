@@ -127,6 +127,18 @@ const Register = () => {
         }
     };
 
+    // Change Email - Reset OTP state
+    const handleChangeEmail = () => {
+        setOtpState({
+            sent: false,
+            verified: false,
+            otp: '',
+            cooldown: 0
+        });
+        setErrors({});
+        setSuccessMsg('');
+    };
+
     // Register
     const handleRegister = async (e) => {
         e.preventDefault();
@@ -246,8 +258,15 @@ const Register = () => {
                         {/* OTP Section */}
                         {otpState.sent && !otpState.verified && (
                             <div className="bg-gray-50 border-2 border-primary-200 rounded-xl p-4 space-y-3">
-                                <div className="bg-blue-50 text-blue-700 text-sm p-2 rounded text-center">
-                                    📧 OTP sent to <strong>{formData.email}</strong>
+                                <div className="flex items-center justify-between bg-blue-50 text-blue-700 text-sm p-2 rounded">
+                                    <span>📧 OTP sent to <strong>{formData.email}</strong></span>
+                                    <button
+                                        type="button"
+                                        onClick={handleChangeEmail}
+                                        className="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline"
+                                    >
+                                        Change Email
+                                    </button>
                                 </div>
                                 <div>
                                     <label className="input-label text-center block">Enter 6-digit OTP</label>

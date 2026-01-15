@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import SaveButton from './SaveButton';
 
 const ListingCard = ({ listing }) => {
     return (
@@ -32,6 +33,11 @@ const ListingCard = ({ listing }) => {
                         </svg>
                     </div>
                 )}
+
+                {/* Save Button Overlay */}
+                <div className="absolute top-2 right-2 bg-white rounded-full shadow-md" onClick={(e) => e.preventDefault()}>
+                    <SaveButton listing={listing} />
+                </div>
 
                 {/* Sold Overlay */}
                 {listing.is_sold && (
