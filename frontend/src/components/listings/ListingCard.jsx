@@ -8,15 +8,15 @@ const ListingCard = ({ listing }) => {
             className="card group hover:shadow-xl transition-all duration-300 overflow-hidden block"
         >
             {/* Image Container with Fixed Aspect Ratio */}
-            <div className="relative h-48 bg-gray-100 overflow-hidden">
+            <div className="relative h-48 bg-white overflow-hidden border-b border-gray-200">
                 {listing.first_image ? (
                     <img
                         src={listing.first_image}
                         alt={listing.title}
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                         <svg
                             className="w-12 h-12 text-gray-400"
                             fill="none"

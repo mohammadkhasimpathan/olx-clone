@@ -26,15 +26,34 @@ const Home = () => {
 
     const { showError } = useUI();
 
-    // Update URL when filters change
+    // Default filter values
+    const defaultFilters = {
+        search: '',
+        category: '',
+        location: '',
+        min_price: '',
+        max_price: '',
+        ordering: '-created_at',
+        is_sold: 'false',
+    };
+
+    // Update URL when filters change (only if different from defaults)
     useEffect(() => {
         const params = {};
         Object.keys(filters).forEach(key => {
-            if (filters[key]) {
+            // Only add to URL if value differs from default
+            if (filters[key] && filters[key] !== defaultFilters[key]) {
                 params[key] = filters[key];
             }
         });
-        setSearchParams(params);
+
+        // Only update URL if there are actual params to set
+        if (Object.keys(params).length > 0) {
+            setSearchParams(params);
+        } else {
+            // Clear URL params if all filters are at default
+            setSearchParams({});
+        }
     }, [filters, setSearchParams]);
 
     // Load data when filters change
