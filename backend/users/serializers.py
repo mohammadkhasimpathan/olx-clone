@@ -17,7 +17,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'id': self.user.id,
             'username': self.user.username,
             'email': self.user.email,
-            'is_verified': self.user.is_verified,
+            'email_verified': self.user.email_verified,
             'phone_number': self.user.phone_number,
             'location': self.user.location,
         }
@@ -29,8 +29,8 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone_number', 'location', 'is_verified', 'date_joined']
-        read_only_fields = ['id', 'is_verified', 'date_joined']
+        fields = ['id', 'username', 'email', 'phone_number', 'location', 'email_verified', 'date_joined']
+        read_only_fields = ['id', 'email_verified', 'date_joined']
 
 
 class SendOTPSerializer(serializers.Serializer):
