@@ -226,7 +226,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_TIMEOUT = 30  # 30 seconds to handle network latency
 
 # Default sender
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@olxclone.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='anyjobhub@gmail.com')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Email sending behavior
