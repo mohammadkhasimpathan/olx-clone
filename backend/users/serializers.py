@@ -1,105 +1,61 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from django.utils import timezone
-from .utils import generate_otp, send_verification_email
 
 User = get_user_model()
 
 
-class SendOTPSerializer(serializers.Serializer):
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Serializer for sending OTP to email.
-    Only validates email - no other registration data needed at this step.
+    Custom JWT serializer that includes user details in the response
     """
-    email = serializers.EmailField(required=True)
-
-    def validate_email(self, value):
-        """Check if email is already registered"""
-        value = value.strip().lower()
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already registered. Please login.")
-        return value
-
-
-class VerifyOTPSerializer(serializers.Serializer):
-    """
-    Serializer for verifying OTP.
-    Only verifies the OTP, does NOT create user account.
-    """
-    email = serializers.EmailField(required=True)
-    otp = serializers.CharField(required=True, max_length=6, min_length=6)
-
-    def validate_otp(self, value):
-        """Ensure OTP is 6 digits"""
-        if not value.isdigit():
-            raise serializers.ValidationError("OTP must be 6 digits.")
-        return value.strip()
-
-    def validate_email(self, value):
-        """Normalize email"""
-        return value.strip().lower()
-
-
-class RegisterSerializer(serializers.Serializer):
-    """
-    Serializer for final registration step.
-    Validates all user data and ensures OTP was verified.
-    """
-    email = serializers.EmailField(required=True)
-    username = serializers.CharField(required=True, min_length=3, max_length=150)
-    password = serializers.CharField(
-        write_only=True,
-        required=True,
-        validators=[validate_password],
-        style={'input_type': 'password'}
-    )
-    confirm_password = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'},
-        label='Confirm Password'
-    )
-    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=15)
-    location = serializers.CharField(required=False, allow_blank=True, max_length=100)
-
-    def validate_email(self, value):
-        """Check if email is already registered"""
-        value = value.strip().lower()
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already registered.")
-        return value
-
-    def validate_username(self, value):
-        """Check if username is already taken"""
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Username already taken.")
-        return value
-
     def validate(self, attrs):
-        """Validate password match"""
-        if attrs['password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
-        return attrs
-
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Serializer for viewing and updating user profile.
-    Read-only username, allows updating other fields.
-    """
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 
-                  'phone_number', 'location', 'created_at']
-        read_only_fields = ['id', 'username', 'created_at']
+        data = super().validate(attrs)
+        
+        # Add custom user data to the response
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'is_verified': self.user.is_verified,
+            'phone_number': self.user.phone_number,
+            'location': self.user.location,
+        }
+        
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Basic user serializer for displaying user info in listings.
-    """
+    """Serializer for User model"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'phone_number', 'location']
+        fields = ['id', 'username', 'email', 'phone_number', 'location', 'is_verified', 'date_joined']
+        read_only_fields = ['id', 'is_verified', 'date_joined']
+
+
+class SendOTPSerializer(serializers.Serializer):
+    """Serializer for sending OTP"""
+    email = serializers.EmailField()
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    """Serializer for verifying OTP"""
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6, min_length=6)
+
+
+class RegisterSerializer(serializers.Serializer):
+    """Serializer for user registration"""
+    email = serializers.EmailField()
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(write_only=True, min_length=8)
+    phone_number = serializers.CharField(required=False, allow_blank=True)
+    location = serializers.CharField(required=False, allow_blank=True)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for user profile updates"""
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'phone_number', 'location']
+        read_only_fields = ['username', 'email']
