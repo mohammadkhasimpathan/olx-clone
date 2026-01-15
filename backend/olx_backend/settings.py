@@ -221,8 +221,9 @@ EMAIL_USE_SSL = False
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
-# Timeout to prevent worker hanging on Render FREE tier
-EMAIL_TIMEOUT = 10  # 10 seconds max
+# Timeout increased for Render FREE tier network latency
+# Render's network can be slower, especially on FREE tier
+EMAIL_TIMEOUT = 30  # 30 seconds to handle network latency
 
 # Default sender
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@olxclone.com')
