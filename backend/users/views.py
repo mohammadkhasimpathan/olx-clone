@@ -40,6 +40,10 @@ class SendOTPView(APIView):
     - Generates and sends OTP
     - Creates/updates PendingRegistration record
     - Does NOT require or store password/username yet
+    
+    PRODUCTION-SAFE: Email failure does NOT crash the API.
+    OTP is saved to database even if email fails.
+    User can use resend-otp if email doesn't arrive.
     """
     permission_classes = [permissions.AllowAny]
     
@@ -57,7 +61,8 @@ class SendOTPView(APIView):
             otp = generate_otp()
             otp_hash = make_password(otp)
             
-            # Create or update PendingRegistration (only email and OTP data)
+            # CRITICAL: Save OTP to database FIRST (before email)
+            # This ensures OTP is available even if email fails
             pending, created = PendingRegistration.objects.update_or_create(
                 email=email,
                 defaults={
@@ -74,24 +79,30 @@ class SendOTPView(APIView):
                 }
             )
             
-            # Send OTP via email
+            # Try to send OTP via email (best effort - does NOT block success)
             email_sent = send_verification_email(email, otp)
             
             if not email_sent:
-                return Response(
-                    {'error': 'Failed to send email. Please try again.'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                # Log warning but DO NOT return error
+                # User can use resend-otp if needed
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to send OTP email to {email}, but OTP saved to database")
             
+            # ALWAYS return success - OTP is in database
+            # Email failure is logged but not exposed to user
             return Response({
                 'message': 'OTP sent to your email. Valid for 5 minutes.',
                 'email': email
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            print(f"Send OTP Error: {e}")
+            # Log unexpected errors
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Send OTP Error: {e}", exc_info=True)
             return Response(
-                {'error': f'Server error: {str(e)}'},
+                {'error': 'Server error. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -327,15 +338,23 @@ class ResendOTPView(APIView):
             pending.is_verified = False  # Reset verification status
             pending.save()
             
-            # Send email
-            send_verification_email(email, otp)
+            # Try to send email (best effort)
+            email_sent = send_verification_email(email, otp)
             
+            if not email_sent:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to resend OTP email to {email}, but OTP saved to database")
+            
+            # Always return success - OTP is in database
             return Response({
                 'message': 'New OTP sent to your email.'
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            print(f"Resend OTP Error: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Resend OTP Error: {e}", exc_info=True)
             return Response(
                 {'error': 'Failed to resend OTP'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -390,13 +409,21 @@ class RequestPasswordResetView(APIView):
             user.reset_otp_created_at = timezone.now()
             user.save()
             
-            send_password_reset_email(user, otp)
+            # Try to send email (best effort)
+            email_sent = send_password_reset_email(user, otp)
+            
+            if not email_sent:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to send password reset email to {user.email}")
             
             return Response({'message': 'If account exists, reset code sent.'})
             
         except Exception as e:
-            print(f"Password Reset Error: {e}")
-            return Response({'error': f'Server Error: {str(e)}'}, status=500)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Password Reset Error: {e}", exc_info=True)
+            return Response({'error': 'Server error'}, status=500)
 
 
 class VerifyResetOTPView(APIView):
@@ -438,7 +465,9 @@ class ResetPasswordView(APIView):
             user.reset_otp = None
             user.save()
             
+            # Try to send confirmation email (best effort - doesn't block success)
             send_password_reset_success_email(user)
+            
             return Response({'message': 'Password reset successful'})
         except User.DoesNotExist:
             return Response({'error': 'Error'}, 400)

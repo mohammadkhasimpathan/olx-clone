@@ -209,26 +209,28 @@ CORS_ALLOW_HEADERS = ['*']
 CORS_ALLOW_METHODS = ['*']
 
 
-# Email Configuration
-if DEBUG:
-    # Development: Print emails to console
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    # Production: Use SMTP if configured, else fallback to Console (logging)
-    email_host_user = config('EMAIL_HOST_USER', default='')
-    if email_host_user:
-        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-        EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-        EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-        EMAIL_USE_TLS = True
-        EMAIL_HOST_USER = email_host_user
-        EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-    else:
-        # Fallback to console backend to prevent 500 errors if variables are missing
-        print("WARNING: EMAIL_HOST_USER not set. Using Console Email Backend.")
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email Configuration - PRODUCTION READY
+# Always use SMTP backend (Brevo) - NO console backend in production
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
+# Brevo SMTP Configuration
+EMAIL_HOST = config('EMAIL_HOST', default='smtp-relay.brevo.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+
+# Timeout to prevent worker hanging on Render FREE tier
+EMAIL_TIMEOUT = 10  # 10 seconds max
+
+# Default sender
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@olxclone.com')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Email sending behavior
+# Note: fail_silently in send_mail() handles individual failures
+# Timeout prevents worker blocking
 
 
 # Security Settings
@@ -271,6 +273,16 @@ LOGGING = {
     },
     'loggers': {
         'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users.utils': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users.views': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
