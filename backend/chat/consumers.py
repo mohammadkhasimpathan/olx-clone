@@ -133,14 +133,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def save_message(self, content):
-        """Save message to database WITHOUT triggering signals"""
+        """Save message to database"""
         conversation = Conversation.objects.get(id=self.conversation_id)
-        # Create message - signals will be disabled for WebSocket messages
         message = Message.objects.create(
             conversation=conversation,
             sender=self.user,
-            content=content,
-            _skip_broadcast=True  # Custom flag to skip signal broadcast
+            content=content
         )
         return MessageSerializer(message).data
     
