@@ -39,15 +39,15 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  <Route path="/listing/:id" element={<ListingDetail />} />
+                  <Route path="/listings/:id" element={<ListingDetail />} />
 
                   {/* Protected Routes */}
-                  <Route path="/create-listing" element={
+                  <Route path="/listings/create" element={
                     <ProtectedRoute>
                       <CreateListing />
                     </ProtectedRoute>
                   } />
-                  <Route path="/edit-listing/:id" element={
+                  <Route path="/listings/:id/edit" element={
                     <ProtectedRoute>
                       <EditListing />
                     </ProtectedRoute>
