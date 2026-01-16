@@ -59,5 +59,5 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'phone_number', 'location'
         ]
-        read_only_fields = ['username', 'email'            'is_online', 'last_seen'
+        read_only_fields = ['username', 'email']
         ]
