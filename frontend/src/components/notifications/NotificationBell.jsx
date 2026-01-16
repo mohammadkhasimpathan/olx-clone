@@ -149,7 +149,7 @@ const NotificationBell = () => {
             </button>
 
             {/* Dropdown */}
-            {isOpen && (
+            {showDropdown && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-200">
