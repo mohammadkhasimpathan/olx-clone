@@ -133,8 +133,12 @@ const ChatWindow = () => {
         try {
             setLoading(true);
             const data = await chatService.getMessages(id);
-            setMessages(Array.isArray(data) ? data : []);
+            // Handle both paginated and non-paginated responses
+            const messageList = data.results || data;
+            setMessages(Array.isArray(messageList) ? messageList : []);
+            console.log('[Chat] Loaded', messageList.length, 'messages');
         } catch (error) {
+            console.error('[Chat] Failed to load messages:', error);
             showError('Failed to load messages');
             setMessages([]);
         } finally {
@@ -143,13 +147,19 @@ const ChatWindow = () => {
     };
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
     };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent page scroll
 
         if (!newMessage.trim() || sending) return;
+
+        const messageContent = newMessage.trim();
+        setNewMessage(''); // Clear input immediately for better UX
 
         try {
             setSending(true);
@@ -158,20 +168,19 @@ const ChatWindow = () => {
             if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                 wsRef.current.send(JSON.stringify({
                     type: 'chat_message',
-                    content: newMessage.trim()
+                    content: messageContent
                 }));
                 console.log('[Chat WS] Message sent via WebSocket');
             } else {
                 // Fallback to REST API
                 console.log('[Chat WS] WebSocket not ready, using REST API');
-                await chatService.sendMessage(id, newMessage.trim());
+                await chatService.sendMessage(id, messageContent);
                 await loadMessages(); // Reload to show new message
             }
-
-            setNewMessage('');
         } catch (error) {
             showError('Failed to send message');
             console.error('[Chat] Send error:', error);
+            setNewMessage(messageContent); // Restore message on error
         } finally {
             setSending(false);
         }
@@ -272,8 +281,8 @@ const ChatWindow = () => {
                                     >
                                         <div
                                             className={`max-w-[75%] sm:max-w-[60%] rounded-2xl px-4 py-2 shadow-sm ${isOwnMessage
-                                                    ? 'bg-blue-600 text-white rounded-br-none'
-                                                    : 'bg-white text-gray-800 rounded-bl-none'
+                                                ? 'bg-blue-600 text-white rounded-br-none'
+                                                : 'bg-white text-gray-800 rounded-bl-none'
                                                 }`}
                                         >
                                             <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
