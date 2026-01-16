@@ -177,13 +177,22 @@ class SavedListingSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
-        """Create saved listing, preventing duplicates"""
+        """Create a saved listing with validation"""
         user = self.context['request'].user
         listing_id = validated_data['listing_id']
         
+        # Prevent users from saving their own listings
+        listing = Listing.objects.get(id=listing_id)
+        if listing.user == user:
+            raise serializers.ValidationError({
+                'listing': 'You cannot save your own listing'
+            })
+        
         # Check if already saved
         if SavedListing.objects.filter(user=user, listing_id=listing_id).exists():
-            raise serializers.ValidationError("Listing already saved")
+            raise serializers.ValidationError({
+                'listing': 'You have already saved this listing'
+            })
         
         return SavedListing.objects.create(
             user=user,
