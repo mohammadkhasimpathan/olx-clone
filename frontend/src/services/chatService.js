@@ -72,4 +72,5 @@ const chatService = {
     },
 };
 
+export { chatService };
 export default chatService;
