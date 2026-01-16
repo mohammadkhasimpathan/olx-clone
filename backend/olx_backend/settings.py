@@ -15,7 +15,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+# Allowed hosts for Render deployment
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,olx-clone-backend-6ho8.onrender.com,.onrender.com',
+    cast=Csv()
+)
 
 
 # Application definition
@@ -293,7 +298,8 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 # Security Settings
 if not DEBUG:
     # Production security settings
-    SECURE_SSL_REDIRECT = True
+    # IMPORTANT: Set to False because Render handles HTTPS at proxy level
+    SECURE_SSL_REDIRECT = False
     
     # CRITICAL: Trust Render's SSL proxy headers (fixes 301 redirect loop)
     # Render terminates SSL at load balancer, forwards HTTP to app
@@ -309,7 +315,7 @@ if not DEBUG:
 # CSRF trusted origins (for production)
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='https://olx-clone-backend-6ho8.onrender.com,https://olx-clone-frontend-vgcs.onrender.com',
+    default='https://olx-clone-backend-6ho8.onrender.com,https://olx-clone-frontend-vgcs.onrender.com,https://*.onrender.com',
     cast=Csv()
 )
 
