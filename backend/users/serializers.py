@@ -57,7 +57,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile updates"""
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone_number', 'location'            'is_online', 'last_seen'
+        fields = ['username', 'email', 'phone_number', 'location'
         ]
         read_only_fields = ['username', 'email'            'is_online', 'last_seen'
         ]
