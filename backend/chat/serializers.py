@@ -95,8 +95,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = [
             'id', 'listing', 'buyer', 'seller', 'other_user',
-            'last_message', 'unread_count', 'is_active',
-            'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'updated_at'
+            'created_at', 'updated_at', 'last_message', 'unread_count'
         ]
         read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'updated_at']
     
