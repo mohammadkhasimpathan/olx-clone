@@ -43,185 +43,102 @@ function App() {
     <ErrorBoundary>
       <UIProvider>
         <AuthProvider>
-          <SessionManager />
-          <Router>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main className="flex-grow">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/verify-email" element={<VerifyEmail />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/listings/:id" element={<ListingDetail />} />
+          <SSEProvider>
+            <Router>
+              <SessionManager />
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-grow">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/listings/:id" element={<ListingDetail />} />
 
-                  {/* Protected Routes */}
-                  <Route
-                    path="/listings/create"
-                    element={
+                    {/* Protected Routes */}
+                    <Route
+                      path="/listings/create"
+                      element={
+                        <ProtectedRoute>
+                          <CreateListing />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/listings/:id/edit"
+                      element={
+                        <ProtectedRoute>
+                          <EditListing />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/my-listings"
+                      element={
+                        <ProtectedRoute>
+                          <MyListings />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/saved-listings"
+                      element={
+                        <ProtectedRoute>
+                          <SavedListings />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Chat Routes */}
+                    <Route path="/messages" element={
                       <ProtectedRoute>
-                        <CreateListing />
+                        <ChatList />
                       </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/listings/:id/edit"
-                    element={
+                    } />
+                    <Route path="/chat/:id" element={
                       <ProtectedRoute>
-                        <EditListing />
+                        <ChatWindow />
                       </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-listings"
-                    element={
-                      <ProtectedRoute>
-                        <MyListings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/saved-listings"
-                    element={
-                      <ProtectedRoute>
-                        <SavedListings />
-                      </ProtectedRoute>
-                    }
-                  />
+                    } />
 
-                  {/* Chat Routes */}
-                  <Route path="/messages" element={
-                    <ProtectedRoute>
-                      <ChatList />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/chat/:id" element={
-                    <ProtectedRoute>
-                      <ChatWindow />
-                    </ProtectedRoute>
-                  } />
-
-                  {/* Admin Routes */}
-                  <Route
-                    path="/admin"
-                    element={
-                      <AdminRoute>
-                        <AdminLayout />
-                      </AdminRoute>
-                    }
-                  >
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="listings" element={<AdminListings />} />
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="reports" element={<AdminReports />} />
-                    <Route path="audit-log" element={<AdminAuditLog />} />
-                  </Route>
-                  <SSEProvider>
-                    <AuthProvider>
-                      <SessionManager />
-                      <Router>
-                        <div className="flex flex-col min-h-screen">
-                          <Navbar />
-                          <main className="flex-grow">
-                            <Routes>
-                              <Route path="/" element={<Home />} />
-                              <Route path="/login" element={<Login />} />
-                              <Route path="/register" element={<Register />} />
-                              <Route path="/verify-email" element={<VerifyEmail />} />
-                              <Route path="/forgot-password" element={<ForgotPassword />} />
-                              <Route path="/listings/:id" element={<ListingDetail />} />
-
-                              {/* Protected Routes */}
-                              <Route
-                                path="/listings/create"
-                                element={
-                                  <ProtectedRoute>
-                                    <CreateListing />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/listings/:id/edit"
-                                element={
-                                  <ProtectedRoute>
-                                    <EditListing />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/profile"
-                                element={
-                                  <ProtectedRoute>
-                                    <Profile />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/my-listings"
-                                element={
-                                  <ProtectedRoute>
-                                    <MyListings />
-                                  </ProtectedRoute>
-                                }
-                              />
-                              <Route
-                                path="/saved-listings"
-                                element={
-                                  <ProtectedRoute>
-                                    <SavedListings />
-                                  </ProtectedRoute>
-                                }
-                              />
-
-                              {/* Chat Routes */}
-                              <Route path="/messages" element={
-                                <ProtectedRoute>
-                                  <ChatList />
-                                </ProtectedRoute>
-                              } />
-                              <Route path="/chat/:id" element={
-                                <ProtectedRoute>
-                                  <ChatWindow />
-                                </ProtectedRoute>
-                              } />
-
-                              {/* Admin Routes */}
-                              <Route
-                                path="/admin"
-                                element={
-                                  <AdminRoute>
-                                    <AdminLayout />
-                                  </AdminRoute>
-                                }
-                              >
-                                <Route index element={<AdminDashboard />} />
-                                <Route path="listings" element={<AdminListings />} />
-                                <Route path="users" element={<AdminUsers />} />
-                                <Route path="reports" element={<AdminReports />} />
-                                <Route path="audit-log" element={<AdminAuditLog />} />
-                              </Route>
-                            </Routes>
-                          </main>
-                          <Footer />
-                        </div>
-                        {/* Global UI Components */}
-                        <ToastContainer />
-                        <LoadingSpinner />
-                      </Router>
-                    </AuthProvider>
-                  </SSEProvider>
-                </UIProvider>
-              </ErrorBoundary>
-              );
+                    {/* Admin Routes */}
+                    <Route
+                      path="/admin"
+                      element={
+                        <AdminRoute>
+                          <AdminLayout />
+                        </AdminRoute>
+                      }
+                    >
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="listings" element={<AdminListings />} />
+                      <Route path="users" element={<AdminUsers />} />
+                      <Route path="reports" element={<AdminReports />} />
+                      <Route path="audit-log" element={<AdminAuditLog />} />
+                    </Route>
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+              {/* Global UI Components */}
+              <ToastContainer />
+              <LoadingSpinner />
+            </Router>
+          </SSEProvider>
+        </AuthProvider>
+      </UIProvider>
+    </ErrorBoundary>
+  );
 }
 
-              export default App;
+export default App;
