@@ -6,8 +6,9 @@ import time
 import queue
 import logging
 from django.http import StreamingHttpResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from django.views.decorators.http import require_http_methods
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from .event_manager import event_manager
 
 logger = logging.getLogger(__name__)
@@ -48,29 +49,54 @@ def sse_stream(user_id: int):
         event_manager.unsubscribe(user_id)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@require_http_methods(["GET"])
 def sse_endpoint(request):
     """
     SSE endpoint with JWT authentication.
     
     Usage:
-        GET /api/events/stream/
-        Authorization: Bearer <jwt_token>
+        GET /api/events/stream/?token=<jwt_token>
     
     Returns:
         StreamingHttpResponse with text/event-stream content type
     """
-    user_id = request.user.id
-    logger.info(f"SSE connection established for user {user_id}")
+    # Manual JWT authentication (since we're not using DRF's APIView)
+    token = request.GET.get('token')
     
-    response = StreamingHttpResponse(
-        sse_stream(user_id),
-        content_type='text/event-stream'
-    )
+    if not token:
+        return StreamingHttpResponse(
+            "error: No authentication token provided\n\n",
+            content_type='text/event-stream',
+            status=401
+        )
     
-    # SSE-specific headers
-    response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
-    
-    return response
+    try:
+        # Authenticate using JWT
+        jwt_auth = JWTAuthentication()
+        validated_token = jwt_auth.get_validated_token(token)
+        user = jwt_auth.get_user(validated_token)
+        
+        if not user or not user.is_authenticated:
+            raise AuthenticationFailed('Invalid user')
+        
+        user_id = user.id
+        logger.info(f"SSE connection established for user {user_id}")
+        
+        response = StreamingHttpResponse(
+            sse_stream(user_id),
+            content_type='text/event-stream'
+        )
+        
+        # SSE-specific headers
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        
+        return response
+        
+    except (AuthenticationFailed, Exception) as e:
+        logger.error(f"SSE authentication failed: {e}")
+        return StreamingHttpResponse(
+            f"error: Authentication failed\n\n",
+            content_type='text/event-stream',
+            status=401
+        )
