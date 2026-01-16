@@ -1,42 +1,37 @@
 """
-Signal handlers for chat app to publish SSE events
+Signal handlers for chat app to broadcast via Django Channels
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from .models import Message
-from realtime.event_manager import event_manager
+from .serializers import MessageSerializer
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Message)
-def publish_message_event(sender, instance, created, **kwargs):
+def broadcast_message_via_channels(sender, instance, created, **kwargs):
     """
-    Publish SSE event when a new message is created.
-    Notifies the recipient (other participant in conversation).
+    Broadcast new message via Django Channels WebSocket.
+    Sends to conversation-specific channel group.
     """
     if created:
-        conversation = instance.conversation
+        channel_layer = get_channel_layer()
+        conversation_id = instance.conversation.id
         
-        # Determine recipient (the other participant)
-        recipient = conversation.seller if instance.sender == conversation.buyer else conversation.buyer
+        # Serialize message
+        message_data = MessageSerializer(instance).data
         
-        # Publish event to recipient
-        event_manager.publish(
-            user_id=recipient.id,
-            event_type='chat_message',
-            data={
-                'conversation_id': conversation.id,
-                'message_id': instance.id,
-                'sender_id': instance.sender.id,
-                'sender_username': instance.sender.username,
-                'content': instance.content,
-                'message_type': instance.message_type,
-                'created_at': instance.created_at.isoformat(),
-                'listing_id': conversation.listing.id,
-                'listing_title': conversation.listing.title,
+        # Broadcast to conversation group
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{conversation_id}",
+            {
+                "type": "chat_message",
+                "message": message_data
             }
         )
         
-        logger.info(f"Published chat_message event to user {recipient.id}")
+        logger.info(f"Broadcasted message {instance.id} to conversation {conversation_id}")

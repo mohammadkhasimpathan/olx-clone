@@ -1,10 +1,12 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from chat.models import Message
 from listings.models import Listing
 from .models import Notification, NotificationPreference
-from realtime.event_manager import event_manager
+from .serializers import NotificationSerializer
 import logging
 
 User = get_user_model()
@@ -19,54 +21,73 @@ def create_notification_preferences(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Notification)
-def publish_notification_event(sender, instance, created, **kwargs):
+def broadcast_notification_via_channels(sender, instance, created, **kwargs):
     """
-    Publish SSE event when a new notification is created.
+    Broadcast notification via Django Channels WebSocket.
+    Sends to user-specific notification channel.
     """
     if created:
-        # Publish SSE event
-        event_manager.publish(
-            user_id=instance.recipient.id,
-            event_type='notification_created',
-            data={
-                'id': instance.id,
-                'type': instance.notification_type,
-                'title': instance.title,
-                'message': instance.message,
-                'link_url': instance.link_url,
-                'created_at': instance.created_at.isoformat(),
+        channel_layer = get_channel_layer()
+        
+        # Serialize notification
+        notification_data = NotificationSerializer(instance).data
+        
+        # Broadcast to user's notification group
+        async_to_sync(channel_layer.group_send)(
+            f"notifications_{instance.recipient.id}",
+            {
+                "type": "notification_created",
+                "notification": notification_data
             }
         )
         
-        logger.info(f"Published notification_created event to user {instance.recipient.id}")
+        # Also send unread count update
+        unread_count = Notification.objects.filter(
+            recipient=instance.recipient,
+            is_read=False
+        ).count()
+        
+        async_to_sync(channel_layer.group_send)(
+            f"notifications_{instance.recipient.id}",
+            {
+                "type": "unread_count_updated",
+                "count": unread_count
+            }
+        )
+        
+        logger.info(f"Broadcasted notification {instance.id} to user {instance.recipient.id}")
 
 
 @receiver(post_save, sender=Message)
 def notify_on_new_message(sender, instance, created, **kwargs):
     """Send notification when new message is created"""
     if created:
-        # This function's implementation needs to be updated to use the new Notification model
-        # or removed if its functionality is now handled elsewhere.
-        # For now, it's left as is, but will likely cause an error due to NotificationService removal.
         try:
-            # NotificationService.notify_new_message(instance.conversation, instance)
-            # Placeholder for new notification creation logic
-            pass 
+            conversation = instance.conversation
+            recipient = conversation.seller if instance.sender == conversation.buyer else conversation.buyer
+            
+            # Create notification
+            Notification.objects.create(
+                recipient=recipient,
+                notification_type='message',
+                title='New Message',
+                message=f'{instance.sender.username} sent you a message about {conversation.listing.title}',
+                link_url=f'/chat/{conversation.id}'
+            )
         except Exception as e:
-            # Log error but don't fail message creation
-            print(f"Failed to create notification: {e}")
+            logger.error(f"Failed to create notification: {e}")
 
 
 @receiver(post_save, sender=Listing)
 def notify_on_listing_sold(sender, instance, created, **kwargs):
     """Send notification when listing is marked as sold"""
     if not created and instance.is_sold:
-        # Check if it was just marked as sold
         try:
             old_instance = Listing.objects.get(pk=instance.pk)
             if not old_instance.is_sold and instance.is_sold:
-                NotificationService.notify_listing_sold(instance)
+                # Notify interested users (optional - implement if needed)
+                pass
         except Listing.DoesNotExist:
             pass
         except Exception as e:
-            print(f"Failed to create notification: {e}")
+            logger.error(f"Failed to create notification: {e}")

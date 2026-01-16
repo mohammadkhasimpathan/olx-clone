@@ -8,9 +8,28 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
 import os
-
 from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+from channels.security.websocket import AllowedHostsOriginValidator
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'olx_backend.settings')
 
-application = get_asgi_application()
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
+django_asgi_app = get_asgi_application()
+
+# Import routing after Django setup
+from chat.routing import websocket_urlpatterns as chat_patterns
+from notifications.routing import websocket_urlpatterns as notification_patterns
+
+application = ProtocolTypeRouter({
+    "http": django_asgi_app,
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(
+            URLRouter(
+                chat_patterns + notification_patterns
+            )
+        )
+    ),
+})

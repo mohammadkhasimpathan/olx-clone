@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Third-party apps
+    'daphne',  # Must be first for Channels
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -38,13 +39,16 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'cloudinary',
     
+    # Channels
+    'channels',
+    
     # Local apps
     'users',
     'categories',
     'listings',
     'chat',  # Messaging system
     'notifications',  # Notification system
-    'realtime',  # SSE real-time events
+    'realtime',  # SSE real-time events (will be removed)
 ]
 
 MIDDLEWARE = [
@@ -77,6 +81,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'olx_backend.wsgi.application'
+ASGI_APPLICATION = 'olx_backend.asgi.application'
+
+# Channels Configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [config('REDIS_URL', default='redis://localhost:6379')],
+        },
+    },
+}
 
 
 # Database
