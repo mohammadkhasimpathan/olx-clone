@@ -186,6 +186,20 @@ const ChatWindow = () => {
         }
     };
 
+    // Auto-scroll when messages change
+    useEffect(() => {
+        if (messages.length > 0) {
+            scrollToBottom();
+        }
+    }, [messages]);
+
+    // Scroll on initial load
+    useEffect(() => {
+        if (!loading && conversation) {
+            scrollToBottom();
+        }
+    }, [loading, conversation]);
+
     const formatMessageTime = (timestamp) => {
         const date = new Date(timestamp);
         const now = new Date();
