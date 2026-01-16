@@ -84,6 +84,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             logger.info(f"[WebSocket] Message broadcast to chat_{self.conversation_id}")
         
+        # Handle typing indicator
+        elif message_type == 'typing':
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'user_typing',
+                    'user_id': self.user.id,
+                    'username': self.user.username,
+                    'is_typing': data.get('is_typing', False)
+                }
+            )
+            return
+        
         elif message_type == 'mark_read':
             # Mark messages as read
             await self.mark_messages_read()
@@ -103,6 +116,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'chat_message',
             'message': event['message']
         }))
+    
+    async def user_typing(self, event):
+        """Send typing indicator to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'user_id': event['user_id'],
+            'username': event['username'],
+            'is_typing': event['is_typing']
+        }))
+    
     
     async def messages_read(self, event):
         """Send read receipt to WebSocket"""

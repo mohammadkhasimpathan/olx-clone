@@ -16,12 +16,14 @@ const ChatWindow = () => {
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+    const [otherUserTyping, setOtherUserTyping] = useState(false);
     const messagesEndRef = useRef(null);
 
     // CRITICAL: Use ref to store WebSocket - prevents recreation on re-render
     const wsRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
     const reconnectAttemptsRef = useRef(0);
+    const typingTimeoutRef = useRef(null);
 
     // Stable message handler using useCallback
     const handleIncomingMessage = useCallback((data) => {
@@ -34,8 +36,13 @@ const ChatWindow = () => {
                 }
                 return [...prev, message];
             });
+        } else if (data.type === 'typing') {
+            // Handle typing indicator (only show for other user)
+            if (data.user_id !== user.id) {
+                setOtherUserTyping(data.is_typing);
+            }
         }
-    }, []);
+    }, [user]);
 
     // WebSocket connection - ONLY depends on primitive values (id, user.id)
     useEffect(() => {
