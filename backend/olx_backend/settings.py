@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     'listings',
     'chat',  # Messaging system
     'notifications',  # Notification system
-    'realtime',  # SSE real-time events (will be removed)
 ]
 
 MIDDLEWARE = [
