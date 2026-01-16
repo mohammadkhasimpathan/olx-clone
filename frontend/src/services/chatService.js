@@ -14,7 +14,7 @@ const chatService = {
      * @param {number} listingId - ID of the listing
      */
     getOrCreateConversation: async (listingId) => {
-        const response = await api.post('/chat/conversations/', { listing: listingId });
+        const response = await api.post('/chat/conversations/', { listing_id: listingId });
         return response.data;
     },
 
