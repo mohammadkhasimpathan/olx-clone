@@ -27,15 +27,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     throttle_classes = [BurstThrottle]  # Apply burst throttle to all actions
     
     def get_queryset(self):
-        """Return conversations where user is buyer or seller"""
-        user = self.request.user
+        """Get conversations where user is buyer OR seller"""
         return Conversation.objects.filter(
-            Q(buyer=user) | Q(seller=user),
-            is_active=True
-        ).select_related(
-            'listing',
-            'listing__user',
-            'listing__category',
             'buyer',
             'seller'
         ).prefetch_related(
