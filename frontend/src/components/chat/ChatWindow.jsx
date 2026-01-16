@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { chatService } from '../../services/chatService';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
-import { useWebSocket } from '../../hooks/useWebSocket';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 const ChatWindow = () => {
@@ -19,10 +18,13 @@ const ChatWindow = () => {
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // WebSocket connection for real-time messages
-    const wsUrl = `${import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}/ws/chat/${id}/`;
+    // CRITICAL: Use ref to store WebSocket - prevents recreation on re-render
+    const wsRef = useRef(null);
+    const reconnectTimeoutRef = useRef(null);
+    const reconnectAttemptsRef = useRef(0);
 
-    const { send: sendWs } = useWebSocket(wsUrl, (data) => {
+    // Stable message handler using useCallback
+    const handleIncomingMessage = useCallback((data) => {
         if (data.type === 'chat_message') {
             const message = data.message;
             setMessages(prev => {
@@ -33,7 +35,80 @@ const ChatWindow = () => {
                 return [...prev, message];
             });
         }
-    }, { enabled: !!id });
+    }, []);
+
+    // WebSocket connection - ONLY depends on primitive values (id, user.id)
+    useEffect(() => {
+        if (!id || !user) return;
+
+        // Prevent duplicate connections
+        if (wsRef.current) {
+            console.log('[Chat WS] Connection already exists');
+            return;
+        }
+
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            console.log('[Chat WS] No auth token');
+            return;
+        }
+
+        const wsUrl = `${import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}/ws/chat/${id}/?token=${token}`;
+        console.log('[Chat WS] Connecting to:', wsUrl.replace(token, '***'));
+
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            console.log('[Chat WS] Connected to conversation', id);
+            reconnectAttemptsRef.current = 0;
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('[Chat WS] Message received:', data.type);
+                handleIncomingMessage(data);
+            } catch (error) {
+                console.error('[Chat WS] Failed to parse message:', error);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('[Chat WS] Error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('[Chat WS] Disconnected from conversation', id);
+            wsRef.current = null;
+
+            // Auto-reconnect with exponential backoff
+            if (reconnectAttemptsRef.current < 5) {
+                reconnectAttemptsRef.current++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 10000);
+                console.log(`[Chat WS] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current})`);
+
+                reconnectTimeoutRef.current = setTimeout(() => {
+                    // Trigger reconnect by clearing and re-running effect
+                    if (!wsRef.current) {
+                        console.log('[Chat WS] Attempting reconnect...');
+                    }
+                }, delay);
+            }
+        };
+
+        // Cleanup function
+        return () => {
+            console.log('[Chat WS] Cleaning up connection');
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+            }
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+            }
+        };
+    }, [id, user?.id, handleIncomingMessage]); // ONLY primitive dependencies
 
     useEffect(() => {
         loadConversation();
@@ -49,7 +124,6 @@ const ChatWindow = () => {
             const data = await chatService.getConversation(id);
             setConversation(data);
         } catch (error) {
-            console.error('Failed to load conversation:', error);
             showError('Failed to load conversation');
             navigate('/messages');
         }
@@ -57,37 +131,14 @@ const ChatWindow = () => {
 
     const loadMessages = async () => {
         try {
+            setLoading(true);
             const data = await chatService.getMessages(id);
-            setMessages(Array.isArray(data) ? data : data.results || []);
-
-            // Mark as read
-            await chatService.markAsRead(id);
+            setMessages(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error('Failed to load messages:', error);
             showError('Failed to load messages');
+            setMessages([]);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-
-        if (!newMessage.trim()) return;
-
-        setSending(true);
-        try {
-            const message = await chatService.sendMessage(id, newMessage.trim());
-            setMessages(prev => [...prev, message]);
-            setNewMessage('');
-        } catch (error) {
-            console.error('Failed to send message:', error);
-            const errorMsg = error.response?.data?.content?.[0] ||
-                error.response?.data?.detail ||
-                'Failed to send message';
-            showError(errorMsg);
-        } finally {
-            setSending(false);
         }
     };
 
@@ -95,153 +146,147 @@ const ChatWindow = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const formatTime = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+
+        if (!newMessage.trim() || sending) return;
+
+        try {
+            setSending(true);
+
+            // Send via WebSocket if connected
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({
+                    type: 'chat_message',
+                    content: newMessage.trim()
+                }));
+                console.log('[Chat WS] Message sent via WebSocket');
+            } else {
+                // Fallback to REST API
+                console.log('[Chat WS] WebSocket not ready, using REST API');
+                await chatService.sendMessage(id, newMessage.trim());
+                await loadMessages(); // Reload to show new message
+            }
+
+            setNewMessage('');
+        } catch (error) {
+            showError('Failed to send message');
+            console.error('[Chat] Send error:', error);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const formatMessageTime = (timestamp) => {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffInHours = (now - date) / (1000 * 60 * 60);
+
+        if (diffInHours < 24) {
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } else {
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
     };
 
     if (loading) {
         return (
-            <div className="container-custom py-8">
-                <div className="max-w-4xl mx-auto">
-                    <div className="card h-[600px] flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-                    </div>
-                </div>
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         );
     }
 
     if (!conversation) {
-        return null;
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <p className="text-center text-gray-600">Conversation not found</p>
+            </div>
+        );
     }
 
-    const otherUser = conversation.other_user;
-    const listing = conversation.listing;
+    const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
 
     return (
-        <div className="container-custom py-8">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="card mb-4">
-                    <div className="p-4 border-b border-gray-200">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/messages')}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+            {/* Header */}
+            <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <Link to="/messages" className="text-blue-600 hover:text-blue-800">
+                            ← Back
+                        </Link>
+                        <div>
+                            <h2 className="text-xl font-semibold">{otherUser.username}</h2>
+                            <Link
+                                to={`/listing/${conversation.listing.id}`}
+                                className="text-sm text-gray-600 hover:text-blue-600"
                             >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-
-                            <Link to={`/listings/${listing.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                                <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                                    {listing.first_image ? (
-                                        <img src={listing.first_image} alt={listing.title} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h2 className="font-semibold text-gray-900 truncate">{listing.title}</h2>
-                                    <p className="text-sm font-medium text-primary-600">{formatCurrency(listing.price)}</p>
-                                </div>
+                                {conversation.listing.title} - {formatCurrency(conversation.listing.price)}
                             </Link>
-
-                            <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900">{otherUser.username}</p>
-                                <p className="text-xs text-gray-500">
-                                    {user.id === conversation.buyer.id ? 'Seller' : 'Buyer'}
-                                </p>
-                            </div>
                         </div>
-                    </div>
-
-                    {/* Messages */}
-                    <div className="h-[400px] overflow-y-auto p-4 bg-gray-50">
-                        {messages.length === 0 ? (
-                            <div className="h-full flex items-center justify-center text-gray-500">
-                                <div className="text-center">
-                                    <svg className="w-16 h-16 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                    </svg>
-                                    <p>No messages yet. Start the conversation!</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {messages.map((message) => {
-                                    const isOwn = message.sender === user.id;
-                                    return (
-                                        <div
-                                            key={message.id}
-                                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                                        >
-                                            <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                                                <div
-                                                    className={`rounded-2xl px-4 py-2 ${isOwn
-                                                        ? 'bg-primary-600 text-white'
-                                                        : 'bg-white text-gray-900 border border-gray-200'
-                                                        }`}
-                                                >
-                                                    <p className="text-sm break-words">{message.content}</p>
-                                                </div>
-                                                <p className={`text-xs text-gray-500 mt-1 px-2 ${isOwn ? 'text-right' : 'text-left'}`}>
-                                                    {formatTime(message.created_at)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                <div ref={messagesEndRef} />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Input */}
-                    <div className="p-4 border-t border-gray-200 bg-white">
-                        <form onSubmit={handleSendMessage} className="flex gap-2">
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type a message..."
-                                className="input-field flex-1"
-                                disabled={sending}
-                                maxLength={2000}
-                            />
-                            <button
-                                type="submit"
-                                disabled={sending || !newMessage.trim()}
-                                className="btn-primary px-6"
-                            >
-                                {sending ? (
-                                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                    </svg>
-                                )}
-                            </button>
-                        </form>
-                        <p className="text-xs text-gray-500 mt-2">
-                            Messages cannot contain URLs or external contact information
-                        </p>
                     </div>
                 </div>
             </div>
+
+            {/* Messages */}
+            <div className="bg-white rounded-lg shadow-md p-4 mb-4 h-[500px] overflow-y-auto">
+                {messages.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
+                ) : (
+                    <div className="space-y-4">
+                        {messages.map((message) => (
+                            <div
+                                key={message.id}
+                                className={`flex ${message.sender === user.id ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div
+                                    className={`max-w-[70%] rounded-lg p-3 ${message.sender === user.id
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-200 text-gray-800'
+                                        }`}
+                                >
+                                    <p className="break-words">{message.content}</p>
+                                    <p className={`text-xs mt-1 ${message.sender === user.id ? 'text-blue-100' : 'text-gray-500'
+                                        }`}>
+                                        {formatMessageTime(message.created_at)}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                )}
+            </div>
+
+            {/* Input */}
+            <form onSubmit={handleSendMessage} className="bg-white rounded-lg shadow-md p-4">
+                <div className="flex space-x-2">
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message..."
+                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        disabled={sending}
+                    />
+                    <button
+                        type="submit"
+                        disabled={!newMessage.trim() || sending}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                        {sending ? 'Sending...' : 'Send'}
+                    </button>
+                </div>
+            </form>
         </div>
     );
 };
