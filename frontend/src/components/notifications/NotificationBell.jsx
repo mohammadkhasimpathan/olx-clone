@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useAuth } from '../../context/AuthContext';
@@ -56,10 +55,10 @@ const NotificationBell = () => {
     }, []);
 
     useEffect(() => {
-        if (isOpen && notifications.length === 0) {
+        if (showDropdown && notifications.length === 0) {
             loadNotifications();
         }
-    }, [isOpen]);
+    }, [showDropdown]);
 
     const loadUnreadCount = async () => {
         try {
@@ -94,7 +93,7 @@ const NotificationBell = () => {
                 console.error('Failed to mark as read:', error);
             }
         }
-        setIsOpen(false);
+        setShowDropdown(false);
     };
 
     const handleMarkAllRead = async () => {
@@ -134,7 +133,7 @@ const NotificationBell = () => {
         <div className="relative" ref={dropdownRef}>
             {/* Bell Icon */}
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setShowDropdown(!showDropdown)}
                 className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
