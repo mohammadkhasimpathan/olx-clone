@@ -108,11 +108,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = self.get_object()
         messages = conversation.messages.select_related('sender').order_by('created_at')
         
-        # Pagination
-        page = self.paginate_queryset(messages)
-        if page is not None:
-            serializer = MessageSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
         
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
