@@ -14,12 +14,16 @@ const ChatList = () => {
     }, []);
 
     const loadConversations = async () => {
+        setLoading(true);
         try {
             const data = await chatService.getConversations();
-            setConversations(data);
+            // Ensure data is always an array - handle both array and paginated response
+            const conversationsArray = Array.isArray(data) ? data : (data?.results || []);
+            setConversations(conversationsArray);
         } catch (error) {
             console.error('Failed to load conversations:', error);
             showError('Failed to load conversations');
+            setConversations([]); // Set empty array on error
         } finally {
             setLoading(false);
         }
@@ -62,7 +66,7 @@ const ChatList = () => {
         );
     }
 
-    if (conversations.length === 0) {
+    if (!conversations || conversations.length === 0) {
         return (
             <div className="container-custom py-16">
                 <div className="max-w-md mx-auto text-center">
@@ -94,7 +98,7 @@ const ChatList = () => {
                             <div className="flex gap-4">
                                 {/* Listing Image */}
                                 <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
-                                    {conversation.listing.first_image ? (
+                                    {conversation.listing?.first_image ? (
                                         <img
                                             src={conversation.listing.first_image}
                                             alt={conversation.listing.title}
@@ -113,7 +117,7 @@ const ChatList = () => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between mb-1">
                                         <h3 className="font-semibold text-gray-900 truncate pr-2">
-                                            {conversation.listing.title}
+                                            {conversation.listing?.title || 'Listing'}
                                         </h3>
                                         {conversation.last_message && (
                                             <span className="text-xs text-gray-500 flex-shrink-0">
@@ -123,12 +127,12 @@ const ChatList = () => {
                                     </div>
 
                                     <p className="text-sm font-medium text-primary-600 mb-1">
-                                        {formatCurrency(conversation.listing.price)}
+                                        {formatCurrency(conversation.listing?.price || 0)}
                                     </p>
 
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm text-gray-600 truncate">
-                                            {conversation.other_user.username}
+                                            {conversation.other_user?.username || 'User'}
                                             {conversation.last_message && (
                                                 <span className="ml-2">
                                                     {conversation.last_message.content}
