@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { chatService } from '../../services/chatService';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
-import { useSSEContext } from '../../contexts/SSEContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 const ChatWindow = () => {
@@ -11,7 +11,6 @@ const ChatWindow = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { showError } = useUI();
-    const { subscribe } = useSSEContext();
 
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -20,35 +19,26 @@ const ChatWindow = () => {
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
 
+    // WebSocket connection for real-time messages
+    const wsUrl = `${import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}/ws/chat/${id}/`;
+
+    const { send: sendWs } = useWebSocket(wsUrl, (data) => {
+        if (data.type === 'chat_message') {
+            const message = data.message;
+            setMessages(prev => {
+                // Avoid duplicates
+                if (prev.find(m => m.id === message.id)) {
+                    return prev;
+                }
+                return [...prev, message];
+            });
+        }
+    }, { enabled: !!id });
+
     useEffect(() => {
         loadConversation();
         loadMessages();
-
-        // Subscribe to SSE events for real-time messages
-        const unsubscribe = subscribe('chat_message', (data) => {
-            // Only add message if it's for this conversation
-            if (data.conversation_id === parseInt(id)) {
-                setMessages(prev => {
-                    // Check if message already exists (avoid duplicates)
-                    if (prev.find(m => m.id === data.message_id)) {
-                        return prev;
-                    }
-                    // Add new message
-                    return [...prev, {
-                        id: data.message_id,
-                        sender_id: data.sender_id,
-                        sender_username: data.sender_username,
-                        content: data.content,
-                        message_type: data.message_type,
-                        created_at: data.created_at,
-                        is_read: false
-                    }];
-                });
-            }
-        });
-
-        return () => unsubscribe();
-    }, [id, subscribe]);
+    }, [id]);
 
     useEffect(() => {
         scrollToBottom();
