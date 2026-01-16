@@ -47,12 +47,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
-        # Leave notification group
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
-        logger.info(f"[WebSocket] User disconnected from notifications")
+        # Only leave group if we successfully joined (auth succeeded)
+        if hasattr(self, 'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+        if hasattr(self, 'user'):
+            logger.info(f"[WebSocket] User {self.user.id} disconnected from notifications")
+        else:
+            logger.info("[WebSocket] Disconnected from notifications")
     
     async def receive(self, text_data):
         """Receive message from WebSocket"""
