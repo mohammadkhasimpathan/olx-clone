@@ -17,7 +17,6 @@ import SavedListings from './pages/SavedListings';
 import Profile from './pages/Profile';
 import ChatList from './components/chat/ChatList';
 import ChatWindow from './components/chat/ChatWindow';
-import NotificationList from './components/notifications/NotificationList';
 
 // Components
 import Navbar from './components/common/Navbar';
@@ -78,11 +77,6 @@ function App() {
                   <Route path="/chat/:id" element={
                     <ProtectedRoute>
                       <ChatWindow />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/notifications" element={
-                    <ProtectedRoute>
-                      <NotificationList />
                     </ProtectedRoute>
                   } />
                 </Routes>
