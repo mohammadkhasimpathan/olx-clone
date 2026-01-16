@@ -64,3 +64,8 @@ export const chatService = {
         return response.data;
     },
 };
+
+    hideConversation: async (conversationId) => {
+        const response = await api.post(`/chat/conversations/${conversationId}/hide/`);
+        return response.data;
+    },

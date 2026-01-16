@@ -90,3 +90,26 @@ class ListingViewSet(viewsets.ModelViewSet):
                 {'error': 'Image not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+    @action(detail=True, methods=['get'])
+    def buyers(self, request, pk=None):
+        """Get list of buyers who messaged about this listing"""
+        from chat.models import Conversation
+        from chat.serializers import ConversationSerializer
+        
+        listing = self.get_object()
+        
+        # Only listing owner can see buyers
+        if listing.user != request.user:
+            return Response(
+                {'error': 'Not authorized'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get all conversations for this listing
+        conversations = Conversation.objects.filter(
+            listing=listing
+        ).select_related('buyer', 'seller', 'listing').prefetch_related('messages')
+        
+        serializer = ConversationSerializer(conversations, many=True)
+        return Response(serializer.data)
