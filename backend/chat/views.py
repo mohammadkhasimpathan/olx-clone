@@ -28,9 +28,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Get conversations where user is buyer OR seller"""
+        user = self.request.user
         return Conversation.objects.filter(
+            Q(buyer=user) | Q(seller=user)
+        ).select_related(
             'buyer',
-            'seller'
+            'seller',
+            'listing',
+            'listing__user',
+            'listing__category'
         ).prefetch_related(
             'messages'
         ).annotate(
@@ -100,7 +106,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def messages(self, request, pk=None):
         """Get all messages in a conversation"""
         conversation = self.get_object()
-        messages = conversation.messages.all()
+        messages = conversation.messages.select_related('sender').order_by('created_at')
         
         # Pagination
         page = self.paginate_queryset(messages)
