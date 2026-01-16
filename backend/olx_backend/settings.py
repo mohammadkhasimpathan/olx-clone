@@ -83,12 +83,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'olx_backend.wsgi.application'
 ASGI_APPLICATION = 'olx_backend.asgi.application'
 
-# Channels Configuration
+# Channels Configuration with Redis
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [config('REDIS_URL', default='redis://localhost:6379')],
+            "capacity": 1500,  # Max messages per channel
+            "expiry": 10,  # Message expiry in seconds
         },
     },
 }
