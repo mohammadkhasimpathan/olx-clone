@@ -48,6 +48,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             
             await self.accept()
+        
+        # Mark user as online
+        from users.models import User
+        await self.database_sync_to_async(User.objects.filter(id=self.user.id).update)(is_online=True, last_seen=None)
             logger.info(f"[WebSocket] User {self.user.id} connected to chat {self.conversation_id}")
             
         except (InvalidToken, TokenError) as e:
@@ -61,6 +65,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+        # Mark user as offline
+        from users.models import User
+        from django.utils import timezone
+        await self.database_sync_to_async(User.objects.filter(id=self.user.id).update)(is_online=False, last_seen=timezone.now())
         logger.info(f"[WebSocket] User disconnected from chat {self.conversation_id}")
     
     async def receive(self, text_data):

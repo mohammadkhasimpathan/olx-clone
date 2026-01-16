@@ -1,0 +1,31 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('chat', '0002_alter_conversation_options_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='message',
+            name='is_delivered',
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name='message',
+            name='is_read',
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name='message',
+            name='delivered_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='message',
+            name='read_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+    ]

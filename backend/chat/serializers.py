@@ -13,9 +13,9 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'conversation', 'sender', 'sender_username',
             'content', 'message_type', 'offer_amount',
-            'is_read', 'created_at'
+            'is_read', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at'
         ]
-        read_only_fields = ['id', 'conversation', 'sender', 'created_at', 'is_read']
+        read_only_fields = ['id', 'conversation', 'sender', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'is_read']
     
     def validate_content(self, value):
         """Validate message content with enhanced spam detection"""
@@ -96,9 +96,9 @@ class ConversationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'listing', 'buyer', 'seller', 'other_user',
             'last_message', 'unread_count', 'is_active',
-            'created_at', 'updated_at'
+            'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'updated_at']
     
     def get_last_message(self, obj):
         """Get the most recent message"""
@@ -107,7 +107,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             return {
                 'content': last_msg.content,
                 'sender_id': last_msg.sender.id,
-                'created_at': last_msg.created_at,
+                'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at': last_msg.created_at,
                 'is_read': last_msg.is_read
             }
         return None

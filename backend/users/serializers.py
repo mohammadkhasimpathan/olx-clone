@@ -29,8 +29,10 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone_number', 'location', 'email_verified', 'date_joined']
-        read_only_fields = ['id', 'email_verified', 'date_joined']
+        fields = ['id', 'username', 'email', 'phone_number', 'location', 'email_verified', 'date_joined'            'is_online', 'last_seen'
+        ]
+        read_only_fields = ['id', 'email_verified', 'date_joined'            'is_online', 'last_seen'
+        ]
 
 
 class SendOTPSerializer(serializers.Serializer):
@@ -57,5 +59,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile updates"""
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone_number', 'location']
-        read_only_fields = ['username', 'email']
+        fields = ['username', 'email', 'phone_number', 'location'            'is_online', 'last_seen'
+        ]
+        read_only_fields = ['username', 'email'            'is_online', 'last_seen'
+        ]
