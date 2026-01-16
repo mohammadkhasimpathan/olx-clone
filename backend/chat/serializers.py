@@ -107,7 +107,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             return {
                 'content': last_msg.content,
                 'sender_id': last_msg.sender.id,
-                'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at': last_msg.created_at,
+'created_at': last_msg.created_at,
                 'is_read': last_msg.is_read
             }
         return None
