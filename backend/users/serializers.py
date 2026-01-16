@@ -60,4 +60,3 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'phone_number', 'location'
         ]
         read_only_fields = ['username', 'email']
-        ]
