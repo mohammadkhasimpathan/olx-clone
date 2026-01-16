@@ -11,7 +11,7 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from channels.security.websocket import AllowedHostsOriginValidator
+from channels.security.websocket import OriginValidator
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'olx_backend.settings')
 
@@ -23,13 +23,21 @@ django_asgi_app = get_asgi_application()
 from chat.routing import websocket_urlpatterns as chat_patterns
 from notifications.routing import websocket_urlpatterns as notification_patterns
 
+# Allowed origins for WebSocket connections
+ALLOWED_ORIGINS = [
+    "https://olx-clone-frontend-vgcs.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": AllowedHostsOriginValidator(
+    "websocket": OriginValidator(
         AuthMiddlewareStack(
             URLRouter(
                 chat_patterns + notification_patterns
             )
-        )
+        ),
+        ALLOWED_ORIGINS
     ),
 })
