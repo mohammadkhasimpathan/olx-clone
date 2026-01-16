@@ -97,7 +97,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             'id', 'listing', 'buyer', 'seller', 'other_user',
             'created_at', 'updated_at', 'last_message', 'unread_count'
         ]
-        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'updated_at']
+        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'updated_at']
     
     def get_last_message(self, obj):
         """Get the most recent message"""
