@@ -21,6 +21,10 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv(
 # Application definition
 
 INSTALLED_APPS = [
+    # Daphne must be first for Channels
+    'daphne',
+    
+    # Django apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -29,7 +33,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Third-party apps
-    'daphne',  # Must be first for Channels
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
