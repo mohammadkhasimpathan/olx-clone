@@ -1,4 +1,3 @@
-```javascript
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell } from 'lucide-react';
@@ -11,41 +10,41 @@ const NotificationBell = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
-    const [loading, setLoading] = useState(false); // Keep loading state for initial fetch
+    const [loading, setLoading] = useState(false);
     const dropdownRef = useRef(null);
 
     // Only connect WebSocket if user is authenticated
     const wsUrl = user
-        ? `${ import.meta.env.VITE_WS_URL || 'ws://localhost:8000' } /ws/notifications / `
+        ? `${import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}/ws/notifications/`
         : null;
 
     const { send: sendWs } = useWebSocket(
         wsUrl,
         (data) => {
             console.log('[Notifications WS] Received:', data.type);
-            if (data.type === 'notification_created') { // Changed from 'notification' to 'notification_created' to match original
+            if (data.type === 'notification_created') {
                 const notification = data.notification;
                 setUnreadCount(prev => prev + 1);
 
-                if (showDropdown) { // Changed from isOpen to showDropdown
+                if (showDropdown) {
                     setNotifications(prev => [notification, ...prev]);
                 }
-            } else if (data.type === 'unread_count_updated') { // Changed from 'unread_count' to 'unread_count_updated' to match original
+            } else if (data.type === 'unread_count_updated') {
                 setUnreadCount(data.count);
             }
         },
-        { enabled: !!user } // Only enable if user exists
+        { enabled: !!user }
     );
 
     useEffect(() => {
         if (user) {
-            loadUnreadCount(); // Keep initial load for unread count
+            loadUnreadCount();
         }
 
         // Click outside to close
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowDropdown(false); // Changed from setIsOpen to setShowDropdown
+                setShowDropdown(false);
             }
         };
 
@@ -187,7 +186,7 @@ const NotificationBell = () => {
                                     onClick={() => handleNotificationClick(notification)}
                                     className={`
                                         block p - 4 border - b border - gray - 100 hover: bg - gray - 50 transition - colors
-                                        ${ !notification.is_read ? 'bg-blue-50' : '' }
+                                        ${!notification.is_read ? 'bg-blue-50' : ''}
 `}
                                 >
                                     <div className="flex gap-3">
@@ -195,7 +194,7 @@ const NotificationBell = () => {
                                             {getNotificationIcon(notification.notification_type)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`text - sm ${ !notification.is_read ? 'font-semibold' : 'font-medium' } text - gray - 900`}>
+                                            <p className={`text - sm ${!notification.is_read ? 'font-semibold' : 'font-medium'} text - gray - 900`}>
                                                 {notification.title}
                                             </p>
                                             <p className="text-sm text-gray-600 mt-1 line-clamp-2">
