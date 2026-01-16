@@ -2,6 +2,7 @@
 WebSocket consumer for real-time notifications
 """
 import json
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from rest_framework_simplejwt.tokens import UntypedToken
@@ -9,6 +10,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -23,6 +25,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.user = await self.get_user_from_token(token)
             
             if not self.user:
+                logger.warning("[WebSocket] Invalid user for notifications")
                 await self.close()
                 return
             
@@ -36,8 +39,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             )
             
             await self.accept()
+            logger.info(f"[WebSocket] User {self.user.id} connected to notifications")
             
-        except (InvalidToken, TokenError):
+        except (InvalidToken, TokenError) as e:
+            logger.error(f"[WebSocket] Auth failed: {e}")
             await self.close()
     
     async def disconnect(self, close_code):
@@ -47,6 +52,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+        logger.info(f"[WebSocket] User disconnected from notifications")
     
     async def receive(self, text_data):
         """Receive message from WebSocket"""
@@ -63,6 +69,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'type': 'notification_created',
             'notification': event['notification']
         }))
+        logger.info(f"[WebSocket] Notification sent to user")
     
     async def notification_read(self, event):
         """Send read notification update to WebSocket"""
@@ -77,6 +84,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'type': 'unread_count_updated',
             'count': event['count']
         }))
+        logger.info(f"[WebSocket] Unread count sent: {event['count']}")
     
     @database_sync_to_async
     def get_user_from_token(self, token):

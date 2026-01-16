@@ -55,18 +55,21 @@ def broadcast_notification_via_channels(sender, instance, created, **kwargs):
             }
         )
         
-        logger.info(f"Broadcasted notification {instance.id} to user {instance.recipient.id}")
+        logger.info(f"[Channels] Notification {instance.id} broadcast to user {instance.recipient.id}")
 
 
 @receiver(post_save, sender=Message)
 def notify_on_new_message(sender, instance, created, **kwargs):
-    """Send notification when new message is created"""
+    """
+    Create notification when new message is created.
+    Does NOT broadcast message (WebSocket consumer handles that).
+    """
     if created:
         try:
             conversation = instance.conversation
             recipient = conversation.seller if instance.sender == conversation.buyer else conversation.buyer
             
-            # Create notification
+            # Create notification (this will trigger notification broadcast via its own signal)
             Notification.objects.create(
                 recipient=recipient,
                 notification_type='message',
@@ -74,8 +77,9 @@ def notify_on_new_message(sender, instance, created, **kwargs):
                 message=f'{instance.sender.username} sent you a message about {conversation.listing.title}',
                 link_url=f'/chat/{conversation.id}'
             )
+            logger.info(f"[Signal] Created notification for message {instance.id}")
         except Exception as e:
-            logger.error(f"Failed to create notification: {e}")
+            logger.error(f"[Signal] Failed to create notification: {e}")
 
 
 @receiver(post_save, sender=Listing)
@@ -90,4 +94,4 @@ def notify_on_listing_sold(sender, instance, created, **kwargs):
         except Listing.DoesNotExist:
             pass
         except Exception as e:
-            logger.error(f"Failed to create notification: {e}")
+            logger.error(f"[Signal] Failed to create notification: {e}")

@@ -2,6 +2,7 @@
 WebSocket consumer for real-time chat messaging
 """
 import json
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from rest_framework_simplejwt.tokens import UntypedToken
@@ -11,6 +12,7 @@ from .models import Conversation, Message
 from .serializers import MessageSerializer
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -28,12 +30,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.user = await self.get_user_from_token(token)
             
             if not self.user:
+                logger.warning(f"[WebSocket] Invalid user for conversation {self.conversation_id}")
                 await self.close()
                 return
             
             # Verify user is participant in conversation
             is_participant = await self.verify_participant()
             if not is_participant:
+                logger.warning(f"[WebSocket] User {self.user.id} not participant in conversation {self.conversation_id}")
                 await self.close()
                 return
             
@@ -44,8 +48,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             
             await self.accept()
+            logger.info(f"[WebSocket] User {self.user.id} connected to chat {self.conversation_id}")
             
-        except (InvalidToken, TokenError):
+        except (InvalidToken, TokenError) as e:
+            logger.error(f"[WebSocket] Auth failed: {e}")
             await self.close()
     
     async def disconnect(self, close_code):
@@ -55,6 +61,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+        logger.info(f"[WebSocket] User disconnected from chat {self.conversation_id}")
     
     async def receive(self, text_data):
         """Receive message from WebSocket"""
@@ -75,6 +82,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message': message
                 }
             )
+            logger.info(f"[WebSocket] Message broadcast to chat_{self.conversation_id}")
         
         elif message_type == 'mark_read':
             # Mark messages as read
@@ -125,12 +133,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def save_message(self, content):
-        """Save message to database"""
+        """Save message to database WITHOUT triggering signals"""
         conversation = Conversation.objects.get(id=self.conversation_id)
+        # Create message - signals will be disabled for WebSocket messages
         message = Message.objects.create(
             conversation=conversation,
             sender=self.user,
-            content=content
+            content=content,
+            _skip_broadcast=True  # Custom flag to skip signal broadcast
         )
         return MessageSerializer(message).data
     
