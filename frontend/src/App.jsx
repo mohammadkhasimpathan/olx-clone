@@ -21,8 +21,6 @@ import ChatWindow from './components/chat/ChatWindow';
 // Components
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
-import ToastContainer from './components/common/ToastContainer';
-import LoadingSpinner from './components/common/LoadingSpinner';
 
 // Styles
 import './index.css';
@@ -83,9 +81,6 @@ function App() {
               </main>
               <Footer />
             </div>
-            {/* Global UI Components */}
-            <ToastContainer />
-            <LoadingSpinner />
           </Router>
         </AuthProvider>
       </UIProvider>
