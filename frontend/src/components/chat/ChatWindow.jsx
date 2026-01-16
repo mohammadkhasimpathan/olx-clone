@@ -216,77 +216,119 @@ const ChatWindow = () => {
     const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-            {/* Header */}
-            <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        <Link to="/messages" className="text-blue-600 hover:text-blue-800">
-                            ← Back
-                        </Link>
-                        <div>
-                            <h2 className="text-xl font-semibold">{otherUser.username}</h2>
+        <div className="min-h-screen bg-gray-100">
+            <div className="container mx-auto px-4 py-4 max-w-5xl">
+                {/* Header */}
+                <div className="bg-white rounded-t-lg shadow-sm border-b border-gray-200 p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
                             <Link
-                                to={`/listing/${conversation.listing.id}`}
-                                className="text-sm text-gray-600 hover:text-blue-600"
+                                to="/messages"
+                                className="text-gray-600 hover:text-blue-600 transition-colors"
                             >
-                                {conversation.listing.title} - {formatCurrency(conversation.listing.price)}
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
                             </Link>
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                    {otherUser.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900">{otherUser.username}</h2>
+                                    <Link
+                                        to={`/listing/${conversation.listing.id}`}
+                                        className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                                    >
+                                        {conversation.listing.title}
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-lg font-bold text-blue-600">{formatCurrency(conversation.listing.price)}</p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Messages */}
-            <div className="bg-white rounded-lg shadow-md p-4 mb-4 h-[500px] overflow-y-auto">
-                {messages.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
-                ) : (
-                    <div className="space-y-4">
-                        {messages.map((message) => (
-                            <div
-                                key={message.id}
-                                className={`flex ${message.sender === user.id ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div
-                                    className={`max-w-[70%] rounded-lg p-3 ${message.sender === user.id
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-200 text-gray-800'
-                                        }`}
-                                >
-                                    <p className="break-words">{message.content}</p>
-                                    <p className={`text-xs mt-1 ${message.sender === user.id ? 'text-blue-100' : 'text-gray-500'
-                                        }`}>
-                                        {formatMessageTime(message.created_at)}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                        <div ref={messagesEndRef} />
-                    </div>
-                )}
-            </div>
-
-            {/* Input */}
-            <form onSubmit={handleSendMessage} className="bg-white rounded-lg shadow-md p-4">
-                <div className="flex space-x-2">
-                    <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        disabled={sending}
-                    />
-                    <button
-                        type="submit"
-                        disabled={!newMessage.trim() || sending}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {sending ? 'Sending...' : 'Send'}
-                    </button>
+                {/* Messages Container */}
+                <div className="bg-gray-50 h-[calc(100vh-280px)] overflow-y-auto p-4 space-y-3">
+                    {messages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                            <svg className="w-16 h-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <p className="text-lg">No messages yet</p>
+                            <p className="text-sm">Start the conversation!</p>
+                        </div>
+                    ) : (
+                        <>
+                            {messages.map((message) => {
+                                const isOwnMessage = message.sender === user.id;
+                                return (
+                                    <div
+                                        key={message.id}
+                                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div
+                                            className={`max-w-[75%] sm:max-w-[60%] rounded-2xl px-4 py-2 shadow-sm ${isOwnMessage
+                                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                                    : 'bg-white text-gray-800 rounded-bl-none'
+                                                }`}
+                                        >
+                                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                                {message.content}
+                                            </p>
+                                            <div className={`flex items-center justify-end mt-1 space-x-1 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                                                }`}>
+                                                <span className="text-xs">
+                                                    {formatMessageTime(message.created_at)}
+                                                </span>
+                                                {isOwnMessage && (
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <div ref={messagesEndRef} />
+                        </>
+                    )}
                 </div>
-            </form>
+
+                {/* Input Area */}
+                <form onSubmit={handleSendMessage} className="bg-white rounded-b-lg shadow-sm border-t border-gray-200 p-4">
+                    <div className="flex items-center space-x-3">
+                        <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Type a message..."
+                            className="flex-1 bg-gray-100 border-0 rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                            disabled={sending}
+                            autoFocus
+                        />
+                        <button
+                            type="submit"
+                            disabled={!newMessage.trim() || sending}
+                            className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
+                        >
+                            {sending ? (
+                                <svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };
