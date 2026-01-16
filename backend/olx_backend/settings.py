@@ -294,6 +294,12 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 if not DEBUG:
     # Production security settings
     SECURE_SSL_REDIRECT = True
+    
+    # CRITICAL: Trust Render's SSL proxy headers (fixes 301 redirect loop)
+    # Render terminates SSL at load balancer, forwards HTTP to app
+    # This tells Django to trust the X-Forwarded-Proto header
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
