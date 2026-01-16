@@ -24,6 +24,8 @@ const ChatWindow = () => {
     const reconnectTimeoutRef = useRef(null);
     const reconnectAttemptsRef = useRef(0);
     const typingTimeoutRef = useRef(null);
+    const audioRef = useRef(typeof Audio !== 'undefined' ? new Audio('/sounds/notification.mp3') : null);
+    const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
     // Stable message handler using useCallback
     const handleIncomingMessage = useCallback((data) => {
@@ -207,6 +209,16 @@ const ChatWindow = () => {
         }
     }, [loading, conversation]);
 
+    // Notification sound on new message
+    useEffect(() => {
+        if (messages.length > previousMessageCount && previousMessageCount > 0) {
+            if (!document.hasFocus() && audioRef.current) {
+                audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+            }
+        }
+        setPreviousMessageCount(messages.length);
+    }, [messages, previousMessageCount]);
+
     const formatMessageTime = (timestamp) => {
         const date = new Date(timestamp);
         const now = new Date();
@@ -335,7 +347,18 @@ const ChatWindow = () => {
                         <input
                             type="text"
                             value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
+                            onChange={(e) => {
+                                setNewMessage(e.target.value);
+                                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                                    wsRef.current.send(JSON.stringify({ type: 'typing', is_typing: true }));
+                                    clearTimeout(typingTimeoutRef.current);
+                                    typingTimeoutRef.current = setTimeout(() => {
+                                        if (wsRef.current?.readyState === WebSocket.OPEN) {
+                                            wsRef.current.send(JSON.stringify({ type: 'typing', is_typing: false }));
+                                        }
+                                    }, 2000);
+                                }
+                            }}
                             placeholder="Type a message..."
                             className="flex-1 bg-gray-100 border-0 rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
                             disabled={sending}
