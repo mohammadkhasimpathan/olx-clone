@@ -9,33 +9,24 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import VerifyEmail from './pages/VerifyEmail';
-import ForgotPassword from './pages/ForgotPassword';
 import ListingDetail from './pages/ListingDetail';
 import CreateListing from './pages/CreateListing';
 import EditListing from './pages/EditListing';
-import Profile from './pages/Profile';
 import MyListings from './pages/MyListings';
 import SavedListings from './pages/SavedListings';
-
-// Chat Pages
+import Profile from './pages/Profile';
 import ChatList from './components/chat/ChatList';
 import ChatWindow from './components/chat/ChatWindow';
-
-// Admin Pages
-import AdminRoute from './components/admin/AdminRoute';
-import AdminLayout from './components/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminListings from './pages/admin/AdminListings';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminReports from './pages/admin/AdminReports';
-import AdminAuditLog from './pages/admin/AdminAuditLog';
+import NotificationList from './components/notifications/NotificationList';
 
 // Components
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
-import ToastContainer from './components/common/Toast';
+import ToastContainer from './components/common/ToastContainer';
 import LoadingSpinner from './components/common/LoadingSpinner';
+
+// Styles
+import './index.css';
 
 function App() {
   return (
@@ -51,53 +42,34 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  <Route path="/verify-email" element={<VerifyEmail />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/listings/:id" element={<ListingDetail />} />
+                  <Route path="/listing/:id" element={<ListingDetail />} />
 
                   {/* Protected Routes */}
-                  <Route
-                    path="/listings/create"
-                    element={
-                      <ProtectedRoute>
-                        <CreateListing />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/listings/:id/edit"
-                    element={
-                      <ProtectedRoute>
-                        <EditListing />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-listings"
-                    element={
-                      <ProtectedRoute>
-                        <MyListings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/saved-listings"
-                    element={
-                      <ProtectedRoute>
-                        <SavedListings />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* Chat Routes */}
+                  <Route path="/create-listing" element={
+                    <ProtectedRoute>
+                      <CreateListing />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/edit-listing/:id" element={
+                    <ProtectedRoute>
+                      <EditListing />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/my-listings" element={
+                    <ProtectedRoute>
+                      <MyListings />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/saved-listings" element={
+                    <ProtectedRoute>
+                      <SavedListings />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/messages" element={
                     <ProtectedRoute>
                       <ChatList />
@@ -108,22 +80,11 @@ function App() {
                       <ChatWindow />
                     </ProtectedRoute>
                   } />
-
-                  {/* Admin Routes */}
-                  <Route
-                    path="/admin"
-                    element={
-                      <AdminRoute>
-                        <AdminLayout />
-                      </AdminRoute>
-                    }
-                  >
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="listings" element={<AdminListings />} />
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="reports" element={<AdminReports />} />
-                    <Route path="audit-log" element={<AdminAuditLog />} />
-                  </Route>
+                  <Route path="/notifications" element={
+                    <ProtectedRoute>
+                      <NotificationList />
+                    </ProtectedRoute>
+                  } />
                 </Routes>
               </main>
               <Footer />
@@ -132,10 +93,9 @@ function App() {
             <ToastContainer />
             <LoadingSpinner />
           </Router>
-        </SSEProvider>
-      </AuthProvider>
-    </UIProvider>
-    </ErrorBoundary >
+        </AuthProvider>
+      </UIProvider>
+    </ErrorBoundary>
   );
 }
 

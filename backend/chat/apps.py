@@ -6,6 +6,5 @@ class ChatConfig(AppConfig):
     name = 'chat'
     
     def ready(self):
-        # Import signal handlers
-        import chat.sse_signals  # noqa
-    verbose_name = 'Chat & Messaging'
+        # Import signal handlers (Channels-based, not SSE)
+        pass  # Signals are now handled via Channels consumers
