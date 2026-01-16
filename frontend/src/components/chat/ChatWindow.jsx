@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { chatService } from '../../services/chatService';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
+import { useSSEContext } from '../../contexts/SSEContext';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 const ChatWindow = () => {
@@ -10,6 +11,7 @@ const ChatWindow = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { showError } = useUI();
+    const { subscribe } = useSSEContext();
 
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -21,7 +23,32 @@ const ChatWindow = () => {
     useEffect(() => {
         loadConversation();
         loadMessages();
-    }, [id]);
+
+        // Subscribe to SSE events for real-time messages
+        const unsubscribe = subscribe('chat_message', (data) => {
+            // Only add message if it's for this conversation
+            if (data.conversation_id === parseInt(id)) {
+                setMessages(prev => {
+                    // Check if message already exists (avoid duplicates)
+                    if (prev.find(m => m.id === data.message_id)) {
+                        return prev;
+                    }
+                    // Add new message
+                    return [...prev, {
+                        id: data.message_id,
+                        sender_id: data.sender_id,
+                        sender_username: data.sender_username,
+                        content: data.content,
+                        message_type: data.message_type,
+                        created_at: data.created_at,
+                        is_read: false
+                    }];
+                });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [id, subscribe]);
 
     useEffect(() => {
         scrollToBottom();
@@ -172,8 +199,8 @@ const ChatWindow = () => {
                                             <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
                                                 <div
                                                     className={`rounded-2xl px-4 py-2 ${isOwn
-                                                            ? 'bg-primary-600 text-white'
-                                                            : 'bg-white text-gray-900 border border-gray-200'
+                                                        ? 'bg-primary-600 text-white'
+                                                        : 'bg-white text-gray-900 border border-gray-200'
                                                         }`}
                                                 >
                                                     <p className="text-sm break-words">{message.content}</p>

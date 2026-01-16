@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { notificationService } from '../../services/notificationService';
+import { useSSEContext } from '../../contexts/SSEContext';
 
 const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
@@ -8,12 +9,30 @@ const NotificationBell = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const dropdownRef = useRef(null);
+    const { subscribe } = useSSEContext();
 
     useEffect(() => {
         loadUnreadCount();
 
-        // Poll for new notifications every 30 seconds
-        const interval = setInterval(loadUnreadCount, 30000);
+        // Subscribe to SSE events for real-time notifications
+        const unsubscribe = subscribe('notification_created', (data) => {
+            // Increment unread count
+            setUnreadCount(prev => prev + 1);
+
+            // If dropdown is open, add notification to list
+            if (isOpen) {
+                setNotifications(prev => [{
+                    id: data.id,
+                    notification_type: data.type,
+                    title: data.title,
+                    message: data.message,
+                    link_url: data.link_url,
+                    created_at: data.created_at,
+                    is_read: false,
+                    time_ago: 'Just now'
+                }, ...prev]);
+            }
+        });
 
         // Click outside to close
         const handleClickOutside = (event) => {
@@ -25,10 +44,10 @@ const NotificationBell = () => {
         document.addEventListener('mousedown', handleClickOutside);
 
         return () => {
-            clearInterval(interval);
+            unsubscribe();
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, []);
+    }, [subscribe, isOpen]);
 
     useEffect(() => {
         if (isOpen && notifications.length === 0) {
