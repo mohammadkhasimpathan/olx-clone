@@ -133,9 +133,9 @@ const ChatWindow = () => {
         try {
             setLoading(true);
             const data = await chatService.getMessages(id);
-            // Handle both paginated and non-paginated responses
-            const messageList = data.results || data;
-            setMessages(Array.isArray(messageList) ? messageList : []);
+            // API now returns array directly (no pagination)
+            const messageList = Array.isArray(data) ? data : (data.results || data);
+            setMessages(messageList);
             console.log('[Chat] Loaded', messageList.length, 'messages');
         } catch (error) {
             console.error('[Chat] Failed to load messages:', error);
@@ -148,8 +148,8 @@ const ChatWindow = () => {
 
     const scrollToBottom = () => {
         setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 150);
     };
 
     const handleSendMessage = async (e) => {
