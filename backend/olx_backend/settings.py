@@ -312,7 +312,7 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
 
-# CSRF trusted origins (for# CORS Settings
+# CORS Settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:5173',
@@ -324,9 +324,8 @@ CORS_ALLOWED_ORIGINS = [
 # CSRF Trusted Origins for Render
 CSRF_TRUSTED_ORIGINS = [
     'https://olx-clone-backend-6ho8.onrender.com',
-    'https://olx-clone-frontend-vgcs.onrender.com',https://olx-clone-frontend-vgcs.onrender.com,https://*.onrender.com',
-    cast=Csv()
-)
+    'https://olx-clone-frontend-vgcs.onrender.com',
+]
 
 
 # Logging Configuration (Production-safe)
