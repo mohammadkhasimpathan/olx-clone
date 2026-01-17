@@ -387,25 +387,11 @@ const ChatWindow = () => {
                     ) : (
                         <>
                             {messages.map((message) => {
-                                // Debug: Log user object structure
-                                if (messages.indexOf(message) === 0) {
-                                    console.log('[Chat] User object:', user);
-                                    console.log('[Chat] User ID:', user?.id, user?.user?.id, user?.pk);
-                                }
-
                                 // Handle sender as either ID or object
                                 const senderId = typeof message.sender === 'object' ? message.sender.id : message.sender;
                                 // Handle user.id being nested in user.user or user.pk
                                 const currentUserId = user?.id || user?.user?.id || user?.pk;
                                 const isOwnMessage = senderId === currentUserId;
-
-                                console.log('[Chat] Message:', {
-                                    id: message.id,
-                                    sender: message.sender,
-                                    senderId,
-                                    userId: currentUserId,
-                                    isOwnMessage
-                                });
 
                                 return (
                                     <div
