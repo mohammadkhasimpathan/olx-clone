@@ -159,7 +159,7 @@ class UserTrustScore(models.Model):
         ).count()
         
         # Update verification flags
-        self.email_verified = self.user.is_verified
+        self.email_verified = self.user.email_verified
         self.phone_verified = bool(self.user.phone_number)
         
         self.save()
