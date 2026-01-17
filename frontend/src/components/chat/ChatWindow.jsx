@@ -308,12 +308,19 @@ const ChatWindow = () => {
     // Notification sound on new message
     useEffect(() => {
         if (messages.length > previousMessageCount && previousMessageCount > 0) {
-            if (!document.hasFocus()) {
-                playNotificationSound();
+            const lastMessage = messages[messages.length - 1];
+            // Only play sound for messages from other users when window not focused
+            if (lastMessage.sender !== user.id && !document.hasFocus()) {
+                try {
+                    const sound = new Audio('/sounds/whatsapp_notification.mp3');
+                    sound.play().catch(err => console.log('[Chat] Audio autoplay blocked:', err));
+                } catch (error) {
+                    console.error('[Chat] Sound error:', error);
+                }
             }
         }
         setPreviousMessageCount(messages.length);
-    }, [messages, previousMessageCount]);
+    }, [messages, previousMessageCount, user]);
 
     const formatMessageTime = (timestamp) => {
         const date = new Date(timestamp);
