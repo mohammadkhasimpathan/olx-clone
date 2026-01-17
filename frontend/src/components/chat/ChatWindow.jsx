@@ -346,11 +346,26 @@ const ChatWindow = () => {
                                                             <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
                                                         </svg>
                                                     )
-                                                )}\n                                            </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
                             })}
+
+                            {/* Typing Indicator */}
+                            {otherUserTyping && (
+                                <div className="flex justify-start mb-2">
+                                    <div className="bg-gray-200 rounded-2xl rounded-bl-none px-4 py-3 max-w-[75%]">
+                                        <div className="flex space-x-1">
+                                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div ref={messagesEndRef} />
                         </>
                     )}
