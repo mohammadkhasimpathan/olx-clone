@@ -91,16 +91,37 @@ class ConversationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
         """Mark all messages in conversation as read"""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from django.utils import timezone
+        
         conversation = self.get_object()
         
-        # Mark messages from other user as read
-        conversation.messages.filter(
+        # Get unread messages from other user
+        unread_messages = conversation.messages.filter(
             is_read=False
-        ).exclude(
-            sender=request.user
-        ).update(is_read=True)
+        ).exclude(sender=request.user)
         
-        return Response({'status': 'messages marked as read'})
+        # Mark as read
+        now = timezone.now()
+        message_ids = list(unread_messages.values_list('id', flat=True))
+        unread_messages.update(is_read=True, read_at=now)
+        
+        # Broadcast to other user
+        channel_layer = get_channel_layer()
+        for message_id in message_ids:
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{conversation.id}',
+                {
+                    'type': 'message_status_update',
+                    'message_id': message_id,
+                    'is_read': True,
+                    'read_at': now.isoformat()
+                }
+            )
+        
+        return Response({'status': 'read', 'count': len(message_ids)}, status=status.HTTP_200_OK)
+
     
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
@@ -166,30 +187,62 @@ class ConversationViewSet(viewsets.ModelViewSet):
         )
 
 
-class MessageViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for viewing messages.
-    Messages are created through ConversationViewSet or WebSocket.
-    """
+class MessageViewSet(viewsets.ModelViewSet):
+    """ViewSet for Message model"""
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ChatMessageThrottle]
     
     def get_queryset(self):
-        """Return messages from user's conversations"""
-        user = self.request.user
+        """Filter messages to only those in conversations the user is part of"""
+        user_conversations = Conversation.objects.filter(
+            Q(buyer=self.request.user) | Q(seller=self.request.user)
+        )
         return Message.objects.filter(
-            Q(conversation__buyer=user) | Q(conversation__seller=user)
-        ).select_related(
-            'conversation',
-            'sender'
-        ).order_by('-created_at')
+            conversation__in=user_conversations
+        ).select_related('sender', 'conversation').order_by('-created_at')
+    
+    @action(detail=True, methods=['post'])
+    def mark_delivered(self, request, pk=None):
+        """Mark message as delivered"""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from django.utils import timezone
+        
+        message = self.get_object()
+        
+        if not message.is_delivered:
+            message.is_delivered = True
+            message.delivered_at = timezone.now()
+            message.save()
+            
+            # Broadcast status update to conversation
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{message.conversation_id}',
+                {
+                    'type': 'message_status_update',
+                    'message_id': message.id,
+                    'is_delivered': True,
+                    'delivered_at': message.delivered_at.isoformat()
+                }
+            )
+        
+        return Response({'status': 'delivered'}, status=status.HTTP_200_OK)
+
 
     @action(detail=True, methods=['post'])
     def hide(self, request, pk=None):
         """Hide conversation for current user (soft delete)"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Hide conversation called for ID: {pk} by user: {request.user.id}")
+        
         conversation = self.get_object()
         # For now, just mark as inactive
         # In future, could add a many-to-many field for hidden_by users
         conversation.is_active = False
         conversation.save()
+        
+        logger.info(f"Conversation {pk} marked as inactive successfully")
         return Response({'status': 'hidden'}, status=status.HTTP_200_OK)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { chatService } from '../../services/chatService';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -24,69 +25,103 @@ const ChatWindow = () => {
     const reconnectTimeoutRef = useRef(null);
     const reconnectAttemptsRef = useRef(0);
     const typingTimeoutRef = useRef(null);
-    const audioRef = useRef(typeof Audio !== 'undefined' ? new Audio('/sounds/notification.mp3') : null);
+    const audioContextRef = useRef(null);
     const [previousMessageCount, setPreviousMessageCount] = useState(0);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Initialize AudioContext on user interaction
+    useEffect(() => {
+        const initAudio = () => {
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        };
+        document.addEventListener('click', initAudio, { once: true });
+        return () => document.removeEventListener('click', initAudio);
+    }, []);
+
+    // Play notification sound
+    const playNotificationSound = async () => {
+        try {
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContextRef.current.state === 'suspended') {
+                await audioContextRef.current.resume();
+            }
+            const oscillator = audioContextRef.current.createOscillator();
+            const gainNode = audioContextRef.current.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContextRef.current.destination);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContextRef.current.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.2);
+            oscillator.start(audioContextRef.current.currentTime);
+            oscillator.stop(audioContextRef.current.currentTime + 0.2);
+        } catch (error) {
+            console.log('[Chat] Audio failed:', error);
+        }
+    };
 
     // Stable message handler using useCallback
     const handleIncomingMessage = useCallback((data) => {
         console.log('[Chat] Incoming message data:', data);
+
         if (data.type === 'chat_message') {
             const message = data.message;
             console.log('[Chat] Processing message:', message);
+
             setMessages(prev => {
-                // Avoid duplicates
-                if (prev.find(m => m.id === message.id)) {
-                    console.log('[Chat] Duplicate message, skipping');
+                if (prev.some(m => m.id === message.id)) {
                     return prev;
                 }
                 console.log('[Chat] Adding new message to state');
-
-                // Show notification for messages from other users
-                if (message.sender !== user.id && document.hidden) {
-                    // Request notification permission if not granted
-                    if (Notification.permission === 'default') {
-                        Notification.requestPermission();
-                    }
-
-                    // Show browser notification
-                    if (Notification.permission === 'granted') {
-                        new Notification('New Message', {
-                            body: message.content,
-                            icon: '/logo.png',
-                            tag: 'chat-message'
-                        });
-                    }
-
-                    // Play notification sound using Web Audio API
-                    try {
-                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                        const oscillator = audioContext.createOscillator();
-                        const gainNode = audioContext.createGain();
-
-                        oscillator.connect(gainNode);
-                        gainNode.connect(audioContext.destination);
-
-                        oscillator.frequency.value = 800;
-                        oscillator.type = 'sine';
-                        gainNode.gain.value = 0.3;
-
-                        oscillator.start(audioContext.currentTime);
-                        oscillator.stop(audioContext.currentTime + 0.1);
-                    } catch (error) {
-                        console.log('[Chat] Audio notification failed:', error);
-                    }
-                }
-
                 return [...prev, message];
             });
-        } else if (data.type === 'typing') {
-            // Handle typing indicator (only show for other user)
-            if (data.user_id !== user.id) {
-                setOtherUserTyping(data.is_typing);
+
+            // Mark as delivered if from other user
+            if (message.sender !== user.id) {
+                api.post(`/chat/messages/${message.id}/mark_delivered/`).catch(err =>
+                    console.error('[Chat] Mark delivered failed:', err)
+                );
             }
+
+            // Show notification for messages from other users
+            if (message.sender !== user.id && document.hidden) {
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+                if (Notification.permission === 'granted') {
+                    new Notification('New Message', {
+                        body: message.content,
+                        icon: '/logo.png',
+                        tag: 'chat-message'
+                    });
+                }
+                playNotificationSound();
+            }
+        } else if (data.type === 'typing') {
+            const isTyping = data.is_typing;
+            const typingUserId = data.user_id;
+            if (typingUserId !== user.id) {
+                setOtherUserTyping(isTyping);
+            }
+        } else if (data.type === 'message_status') {
+            // Update message status
+            setMessages(prev => prev.map(msg =>
+                msg.id === data.message_id
+                    ? {
+                        ...msg,
+                        is_delivered: data.is_delivered ?? msg.is_delivered,
+                        is_read: data.is_read ?? msg.is_read,
+                        delivered_at: data.delivered_at ?? msg.delivered_at,
+                        read_at: data.read_at ?? msg.read_at
+                    }
+                    : msg
+            ));
         }
-    }, [user]);
+    }, [user, playNotificationSound]); // Added playNotificationSound to dependencies
 
     // WebSocket connection - ONLY depends on primitive values (id, user.id)
     useEffect(() => {
@@ -184,18 +219,23 @@ const ChatWindow = () => {
         try {
             setLoading(true);
             const data = await chatService.getMessages(id);
-            // API now returns array directly (no pagination)
-            const messageList = Array.isArray(data) ? data : (data.results || data);
-            setMessages(messageList);
-            console.log('[Chat] Loaded', messageList.length, 'messages');
+            console.log('[Chat] Loaded', data.length, 'messages');
+            setMessages(data);
+
+            // Mark conversation as read
+            if (data.length > 0) {
+                api.post(`/chat/conversations/${id}/mark_read/`).catch(err =>
+                    console.error('[Chat] Mark read failed:', err)
+                );
+            }
         } catch (error) {
             console.error('[Chat] Failed to load messages:', error);
             showError('Failed to load messages');
-            setMessages([]);
         } finally {
             setLoading(false);
         }
     };
+
 
     const scrollToBottom = () => {
         setTimeout(() => {

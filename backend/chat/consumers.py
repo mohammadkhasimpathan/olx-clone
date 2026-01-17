@@ -117,11 +117,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
     
     async def chat_message(self, event):
-        """Send message to WebSocket"""
+        """Handle chat message event from channel layer"""
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
             'message': event['message']
         }))
+    
+    async def message_status_update(self, event):
+        """Handle message status update event"""
+        await self.send(text_data=json.dumps({
+            'type': 'message_status',
+            'message_id': event['message_id'],
+            'is_delivered': event.get('is_delivered'),
+            'is_read': event.get('is_read'),
+            'delivered_at': event.get('delivered_at'),
+            'read_at': event.get('read_at')
+        }))
+
     
     async def user_typing(self, event):
         """Send typing indicator to WebSocket"""
