@@ -92,9 +92,8 @@ WSGI_APPLICATION = 'olx_backend.wsgi.application'
 ASGI_APPLICATION = 'olx_backend.asgi.application'
 
 # Channels Configuration with Redis
-# For Render: Use the Internal Redis URL (redis://..., not rediss://...)
-# The 'redis://' protocol automatically uses plain TCP without SSL
-
+# For Render: SSL settings are passed inside the hosts configuration
+# This is the proper format for channels-redis with SSL
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 
@@ -102,12 +101,14 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_URL],
-            "capacity": 1500,  # Max messages per channel
-            "expiry": 10,  # Message expiry in seconds
-            "connection_kwargs": {
-                "ssl_cert_reqs": ssl.CERT_NONE,  # Disable SSL certificate verification
-            },
+            "hosts": [
+                {
+                    "address": REDIS_URL,
+                    "ssl_cert_reqs": ssl.CERT_NONE,
+                }
+            ],
+            "capacity": 1500,
+            "expiry": 10,
         },
     },
 }
