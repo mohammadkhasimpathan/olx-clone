@@ -186,11 +186,10 @@ class MessageViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def hide(self, request, pk=None):
-        """Hide conversation for current user"""
-        from .models import ConversationHidden
+        """Hide conversation for current user (soft delete)"""
         conversation = self.get_object()
-        ConversationHidden.objects.get_or_create(
-            user=request.user,
-            conversation=conversation
-        )
+        # For now, just mark as inactive
+        # In future, could add a many-to-many field for hidden_by users
+        conversation.is_active = False
+        conversation.save()
         return Response({'status': 'hidden'}, status=status.HTTP_200_OK)

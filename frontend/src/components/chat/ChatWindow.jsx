@@ -310,11 +310,27 @@ const ChatWindow = () => {
                                 </svg>
                             </Link>
                             <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                                    {otherUser.username.charAt(0).toUpperCase()}
+                                <div className="relative">
+                                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                        {otherUser.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    {/* Online status indicator */}
+                                    {otherUser.is_online && (
+                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                    )}
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-semibold text-gray-900">{otherUser.username}</h2>
+                                    <div className="flex items-center space-x-2">
+                                        <h2 className="text-lg font-semibold text-gray-900">{otherUser.username}</h2>
+                                    </div>
+                                    {/* Online status or last seen */}
+                                    {otherUser.is_online ? (
+                                        <p className="text-xs text-green-600 font-medium">Online</p>
+                                    ) : otherUser.last_seen ? (
+                                        <p className="text-xs text-gray-500">
+                                            Last seen {new Date(otherUser.last_seen).toLocaleString()}
+                                        </p>
+                                    ) : null}
                                     <Link
                                         to={`/listing/${conversation.listing.id}`}
                                         className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
