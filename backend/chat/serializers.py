@@ -13,9 +13,9 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'conversation', 'sender', 'sender_username',
             'content', 'message_type', 'offer_amount',
-            'is_read', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at'
+            'is_read', 'created_at'
         ]
-        read_only_fields = ['id', 'conversation', 'sender', 'created_at', 'is_delivered', 'is_read', 'delivered_at', 'read_at', 'is_read']
+        read_only_fields = ['id', 'conversation', 'sender', 'created_at', 'is_read']
     
     def validate_content(self, value):
         """Validate message content with enhanced spam detection"""
