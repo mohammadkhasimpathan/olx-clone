@@ -192,6 +192,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def save_message(self, content):
         """Save message to database"""
         conversation = Conversation.objects.get(id=self.conversation_id)
+        
+        # CRITICAL FIX: Auto-restore conversation if deleted
+        # When User A deletes chat and User B sends message,
+        # conversation becomes visible again for User A
+        if not conversation.is_active:
+            conversation.is_active = True
+            conversation.save()
         message = Message.objects.create(
             conversation=conversation,
             sender=self.user,
