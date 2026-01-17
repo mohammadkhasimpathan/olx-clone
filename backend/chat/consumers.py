@@ -95,7 +95,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """FIX #4: Send periodic ping to prevent Render timeout"""
         try:
             while True:
-                await self.send(text_data=json.dumps({"type": "ping"})
+                await self.send(text_data=json.dumps({"type": "ping"}))
                 await asyncio.sleep(25)  # Every 25 seconds
         except asyncio.CancelledError:
             pass
@@ -150,7 +150,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "type": "chat_message",
             "message": event["message"]
-        })
+        }))
 
     async def message_status_update(self, event):
         """Handle message status update event"""
@@ -161,7 +161,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "is_read": event.get("is_read"),
             "delivered_at": event.get("delivered_at"),
             "read_at": event.get("read_at")
-        })
+        }))
 
     async def user_typing(self, event):
         """Send typing indicator to WebSocket"""
@@ -170,7 +170,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "user_id": event["user_id"],
             "username": event["username"],
             "is_typing": event["is_typing"]
-        })
+        }))
 
     @database_sync_to_async
     def get_user_from_token(self, token):
