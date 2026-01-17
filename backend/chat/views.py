@@ -70,12 +70,24 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_429_TOO_MANY_REQUESTS
             )
         
-        # Get or create conversation
-        conversation, created = Conversation.objects.get_or_create(
-            listing=listing,
-            buyer=request.user,
-            defaults={'seller': listing.user}
-        )
+        # Get or create conversation - reactivate if deleted
+        try:
+            conversation = Conversation.objects.get(
+                listing=listing,
+                buyer=request.user
+            )
+            # Reactivate if deleted
+            if not conversation.is_active:
+                conversation.is_active = True
+                conversation.save()
+            created = False
+        except Conversation.DoesNotExist:
+            conversation = Conversation.objects.create(
+                listing=listing,
+                buyer=request.user,
+                seller=listing.user
+            )
+            created = True
         
         # Return conversation
         response_serializer = ConversationSerializer(
