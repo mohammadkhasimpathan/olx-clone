@@ -303,7 +303,7 @@ This project is licensed under the MIT License.
 
 For issues and questions:
 - GitHub Issues: [Create an issue](https://github.com/mohammadkhasimpathan/olx-clone/issues)
-- Email: your-email@example.com
+- Email: mohammadkhasim.p@gmail.com
 
 ---
 
