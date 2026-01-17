@@ -82,6 +82,9 @@ class Message(models.Model):
         help_text="Price offered (for offer messages)"
     )
     is_read = models.BooleanField(default=False)
+    is_delivered = models.BooleanField(default=False)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
