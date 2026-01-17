@@ -29,8 +29,8 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone_number', 'location', 'email_verified', 'date_joined']
-        read_only_fields = ['id', 'email_verified', 'date_joined']
+        fields = ['id', 'username', 'email', 'phone_number', 'location', 'email_verified', 'is_online', 'last_seen', 'date_joined']
+        read_only_fields = ['id', 'email_verified', 'is_online', 'last_seen', 'date_joined']
 
 
 class SendOTPSerializer(serializers.Serializer):
