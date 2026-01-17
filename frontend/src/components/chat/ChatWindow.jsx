@@ -282,7 +282,7 @@ const ChatWindow = () => {
         try {
             await chatService.hideConversation(id);
             console.log('Chat deleted successfully');
-            navigate('/messages');
+            navigate('/messages', { replace: true });
         } catch (error) {
             showError('Failed to delete chat');
             console.error('[Chat] Delete error:', error);
