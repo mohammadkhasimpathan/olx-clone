@@ -109,6 +109,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
         
         # Broadcast to other user
         channel_layer = get_channel_layer()
+
+    @action(detail=True, methods=["post"])
+    def hide(self, request, pk=None):
+        """Hide conversation for current user (soft delete)"""
+        conversation = self.get_object()
+        conversation.is_active = False
+        conversation.save()
+        return Response({"status": "hidden"}, status=status.HTTP_200_OK)
         for message_id in message_ids:
             async_to_sync(channel_layer.group_send)(
                 f'chat_{conversation.id}',
