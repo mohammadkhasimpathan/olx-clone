@@ -282,6 +282,16 @@ const ChatWindow = () => {
         setShowDeleteConfirm(false);
         
         try {
+            // CRITICAL: Close WebSocket FIRST to prevent reconnection
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+            }
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+            }
+        
+        try {
             await chatService.hideConversation(id);
             console.log('[Chat] Chat deleted successfully');
             
