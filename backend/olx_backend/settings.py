@@ -105,9 +105,8 @@ CHANNEL_LAYERS = {
             "hosts": [REDIS_URL],
             "capacity": 1500,  # Max messages per channel
             "expiry": 10,  # Message expiry in seconds
-            # SSL configuration - handles both redis:// and rediss:// protocols
             "connection_kwargs": {
-                "ssl_cert_reqs": None,  # Disable SSL certificate verification
+                "ssl_cert_reqs": ssl.CERT_NONE,  # Disable SSL certificate verification
             },
         },
     },
