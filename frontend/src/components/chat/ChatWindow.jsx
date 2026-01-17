@@ -387,7 +387,18 @@ const ChatWindow = () => {
                     ) : (
                         <>
                             {messages.map((message) => {
-                                const isOwnMessage = message.sender === user.id;
+                                // Handle sender as either ID or object
+                                const senderId = typeof message.sender === 'object' ? message.sender.id : message.sender;
+                                const isOwnMessage = senderId === user.id;
+
+                                console.log('[Chat] Message:', {
+                                    id: message.id,
+                                    sender: message.sender,
+                                    senderId,
+                                    userId: user.id,
+                                    isOwnMessage
+                                });
+
                                 return (
                                     <div
                                         key={message.id}
