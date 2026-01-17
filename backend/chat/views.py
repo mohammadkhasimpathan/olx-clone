@@ -30,7 +30,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """Get conversations where user is buyer OR seller"""
         user = self.request.user
         return Conversation.objects.filter(
-            is_active=True,
             Q(buyer=user) | Q(seller=user)
         ).select_related(
             'buyer',
