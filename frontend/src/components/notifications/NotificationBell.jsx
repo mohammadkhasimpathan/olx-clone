@@ -28,6 +28,17 @@ const NotificationBell = () => {
                 if (showDropdown) {
                     setNotifications(prev => [notification, ...prev]);
                 }
+
+                // Play notification sound
+                try {
+                    const audio = new Audio('data:audio/wav;base64,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');
+                    audio.volume = 0.3;
+                    audio.play().catch(err => {
+                        console.log('[Notifications] Audio autoplay blocked:', err);
+                    });
+                } catch (error) {
+                    console.log('[Notifications] Audio error:', error);
+                }
             } else if (data.type === 'unread_count_updated') {
                 setUnreadCount(data.count);
             }

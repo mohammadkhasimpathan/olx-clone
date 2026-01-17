@@ -39,6 +39,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             )
             
             await self.accept()
+        
+        # Broadcast online status to all users
+        await self.channel_layer.group_send(
+            "global_users",
+            {
+                "type": "user_status",
+                "user_id": self.user.id,
+                "status": "online"
+            }
+        )
             logger.info(f"[WebSocket] User {self.user.id} connected to notifications")
             
         except (InvalidToken, TokenError) as e:
