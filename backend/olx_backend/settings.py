@@ -92,21 +92,15 @@ WSGI_APPLICATION = 'olx_backend.wsgi.application'
 ASGI_APPLICATION = 'olx_backend.asgi.application'
 
 # Channels Configuration with Redis
-# For Render: SSL settings are passed inside the hosts configuration
-# This is the proper format for channels-redis with SSL
+# Simple configuration - REDIS_URL protocol (redis:// or rediss://) determines SSL usage
 
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379')
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [
-                {
-                    "address": REDIS_URL,
-                    "ssl_cert_reqs": ssl.CERT_NONE,
-                }
-            ],
+            "hosts": [REDIS_URL],
             "capacity": 1500,
             "expiry": 10,
         },
