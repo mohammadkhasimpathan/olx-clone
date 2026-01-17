@@ -29,13 +29,17 @@ const ChatWindow = () => {
 
     // Stable message handler using useCallback
     const handleIncomingMessage = useCallback((data) => {
+        console.log('[Chat] Incoming message data:', data);
         if (data.type === 'chat_message') {
             const message = data.message;
+            console.log('[Chat] Processing message:', message);
             setMessages(prev => {
                 // Avoid duplicates
                 if (prev.find(m => m.id === message.id)) {
+                    console.log('[Chat] Duplicate message, skipping');
                     return prev;
                 }
+                console.log('[Chat] Adding new message to state');
                 return [...prev, message];
             });
         } else if (data.type === 'typing') {
@@ -338,11 +342,11 @@ const ChatWindow = () => {
                                                             <path d="M12.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-1-1a1 1 0 011.414-1.414l.293.293 7.293-7.293a1 1 0 011.414 0z" />
                                                         </svg>
                                                     ) : (
-                                                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                                                    </svg>
+                                                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                                        </svg>
                                                     )
-                                            )}\n                                            </div>
+                                                )}\n                                            </div>
                                         </div>
                                     </div>
                                 );
