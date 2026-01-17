@@ -41,6 +41,24 @@ const ChatWindow = () => {
                     return prev;
                 }
                 console.log('[Chat] Adding new message to state');
+
+                // Show notification for messages from other users
+                if (message.sender !== user.id && document.hidden) {
+                    // Request notification permission if not granted
+                    if (Notification.permission === 'default') {
+                        Notification.requestPermission();
+                    }
+
+                    // Show browser notification
+                    if (Notification.permission === 'granted') {
+                        new Notification('New Message', {
+                            body: message.content,
+                            icon: '/logo.png',
+                            tag: 'chat-message'
+                        });
+                    }
+                }
+
                 return [...prev, message];
             });
         } else if (data.type === 'typing') {
