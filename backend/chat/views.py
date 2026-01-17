@@ -43,6 +43,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
             last_message_time=Max('messages__created_at')
         ).order_by('-last_message_time', '-updated_at')
     
+    
+    def get_object(self):
+        """Override to ensure deleted conversations return 404"""
+        obj = super().get_object()
+        if not obj.is_active:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("This conversation has been deleted.")
+        return obj
     def create(self, request, *args, **kwargs):
         """Create or get existing conversation with rate limiting"""
         # Apply stricter throttle for conversation creation
