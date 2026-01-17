@@ -26,6 +26,7 @@ const ChatWindow = () => {
     const typingTimeoutRef = useRef(null);
     const audioRef = useRef(typeof Audio !== 'undefined' ? new Audio('/sounds/notification.mp3') : null);
     const [previousMessageCount, setPreviousMessageCount] = useState(0);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Stable message handler using useCallback
     const handleIncomingMessage = useCallback((data) => {
@@ -199,6 +200,20 @@ const ChatWindow = () => {
         }
     };
 
+    // Handle delete chat
+    const handleDeleteChat = async () => {
+        try {
+            await chatService.hideConversation(id);
+            showSuccess('Chat deleted successfully');
+            navigate('/messages');
+        } catch (error) {
+            showError('Failed to delete chat');
+            console.error('[Chat] Delete error:', error);
+        } finally {
+            setShowDeleteConfirm(false);
+        }
+    };
+
     // Auto-scroll when messages change
     useEffect(() => {
         if (messages.length > 0) {
@@ -291,8 +306,17 @@ const ChatWindow = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right">
+                        <div className="flex items-center space-x-3">
                             <p className="text-lg font-bold text-blue-600">{formatCurrency(conversation.listing.price)}</p>
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete chat"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -411,6 +435,32 @@ const ChatWindow = () => {
                         </button>
                     </div>
                 </form>
+
+                {/* Delete Confirmation Dialog */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Chat?</h3>
+                            <p className="text-gray-600 mb-6">
+                                This will delete the chat from your side. The other person will still be able to see it.
+                            </p>
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteChat}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
