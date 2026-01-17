@@ -308,8 +308,8 @@ const ChatWindow = () => {
     // Notification sound on new message
     useEffect(() => {
         if (messages.length > previousMessageCount && previousMessageCount > 0) {
-            if (!document.hasFocus() && audioRef.current) {
-                audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+            if (!document.hasFocus()) {
+                playNotificationSound();
             }
         }
         setPreviousMessageCount(messages.length);
