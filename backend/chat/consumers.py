@@ -57,13 +57,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
+        logger.info(f"[WebSocket] User {self.user.id} disconnected from chat_{self.conversation_id}")
+        
         # Leave room group
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
+        
         # Mark user as offline
         from users.models import User
+        await database_sync_to_async(User.objects.filter(id=self.user.id).update)(is_online=False, last_seen=timezone.now())
+    
+    async def receive(self, text_data):
         """Receive message from WebSocket"""
         data = json.loads(text_data)
         message_type = data.get('type')
