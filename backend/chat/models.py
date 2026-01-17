@@ -27,6 +27,10 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     
+    # WhatsApp-style "Delete for Me" timestamps
+    buyer_cleared_at = models.DateTimeField(null=True, blank=True, help_text="When buyer cleared chat history")
+    seller_cleared_at = models.DateTimeField(null=True, blank=True, help_text="When seller cleared chat history")
+    
     class Meta:
         unique_together = ('listing', 'buyer')
         ordering = ['-updated_at']
