@@ -108,6 +108,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = self.get_object()
         
         # Get unread messages from other user
+        
+        # Filter messages based on user's cleared timestamp (WhatsApp-style)
+        if request.user == conversation.buyer and conversation.buyer_cleared_at:
+            messages = messages.filter(created_at__gt=conversation.buyer_cleared_at)
+        elif request.user == conversation.seller and conversation.seller_cleared_at:
+            messages = messages.filter(created_at__gt=conversation.seller_cleared_at)
         unread_messages = conversation.messages.filter(
             is_read=False
         ).exclude(sender=request.user)
@@ -238,16 +244,20 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def hide(self, request, pk=None):
-        """Hide conversation for current user (soft delete)"""
+        """Clear chat history for current user (WhatsApp-style Delete for Me)"""
+        from django.utils import timezone
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"Hide conversation called for ID: {pk} by user: {request.user.id}")
         
         conversation = self.get_object()
-        # For now, just mark as inactive
-        # In future, could add a many-to-many field for hidden_by users
-        conversation.is_active = False
-        conversation.save()
         
-        logger.info(f"Conversation {pk} marked as inactive successfully")
-        return Response({'status': 'hidden'}, status=status.HTTP_200_OK)
+        # Set cleared timestamp based on user role
+        if request.user == conversation.buyer:
+            conversation.buyer_cleared_at = timezone.now()
+            logger.info(f"Buyer cleared conversation {pk}")
+        else:
+            conversation.seller_cleared_at = timezone.now()
+            logger.info(f"Seller cleared conversation {pk}")
+        
+        conversation.save()
+        return Response({'status': 'cleared'}, status=status.HTTP_200_OK)
