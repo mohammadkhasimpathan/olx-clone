@@ -279,16 +279,19 @@ const ChatWindow = () => {
 
     // Handle delete chat
     const handleDeleteChat = async () => {
+        setShowDeleteConfirm(false);
+        
         try {
             await chatService.hideConversation(id);
-            console.log('Chat deleted successfully');
+            console.log('[Chat] Chat deleted successfully');
+            
+            // CRITICAL: Navigate IMMEDIATELY to unmount component
             navigate('/messages', { replace: true });
         } catch (error) {
             showError('Failed to delete chat');
             console.error('[Chat] Delete error:', error);
-        } finally {
-            setShowDeleteConfirm(false);
         }
+    };
     };
 
     // Auto-scroll when messages change
