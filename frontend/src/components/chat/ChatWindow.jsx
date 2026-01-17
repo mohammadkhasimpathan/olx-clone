@@ -194,7 +194,7 @@ const ChatWindow = () => {
                 wsRef.current = null;
             }
         };
-    }, [id, user?.id, handleIncomingMessage]); // ONLY primitive dependencies
+    }, [id, user?.id]); // ONLY primitive dependencies
 
     useEffect(() => {
         loadConversation();
