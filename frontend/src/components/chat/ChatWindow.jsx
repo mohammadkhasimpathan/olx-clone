@@ -281,7 +281,7 @@ const ChatWindow = () => {
     const handleDeleteChat = async () => {
         try {
             await chatService.hideConversation(id);
-            showSuccess('Chat deleted successfully');
+            console.log('Chat deleted successfully');
             navigate('/messages');
         } catch (error) {
             showError('Failed to delete chat');
