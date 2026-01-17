@@ -100,7 +100,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='delete-for-me')
     def mark_read(self, request, pk=None):
         """Mark all messages in conversation as read"""
         from django.utils import timezone
@@ -125,8 +125,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'read', 'count': len(message_ids)}, status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=['post'])
-    def hide(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='delete-for-me')
+    def delete_for_me(self, request, pk=None):
         """Hide conversation for current user (soft delete)"""
         conversation = self.get_object()
         conversation.is_active = False
@@ -139,6 +139,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """Get all messages in a conversation"""
         conversation = self.get_object()
         messages = conversation.messages.select_related('sender').order_by('created_at')
+        # Filter messages based on user's cleared timestamp (WhatsApp-style Delete for Me)
+        if request.user == conversation.buyer and conversation.buyer_cleared_at:
+            messages = messages.filter(created_at__gt=conversation.buyer_cleared_at)
+        elif request.user == conversation.seller and conversation.seller_cleared_at:
+            messages = messages.filter(created_at__gt=conversation.seller_cleared_at)
+
         
         
         serializer = MessageSerializer(messages, many=True)
@@ -213,7 +219,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             conversation__in=user_conversations
         ).select_related('sender', 'conversation').order_by('-created_at')
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='delete-for-me')
     def mark_delivered(self, request, pk=None):
         """Mark message as delivered"""
         from channels.layers import get_channel_layer
@@ -242,8 +248,8 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response({'status': 'delivered'}, status=status.HTTP_200_OK)
 
 
-    @action(detail=True, methods=['post'])
-    def hide(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='delete-for-me')
+    def delete_for_me(self, request, pk=None):
         """Clear chat history for current user (WhatsApp-style Delete for Me)"""
         from django.utils import timezone
         import logging

@@ -67,7 +67,7 @@ const chatService = {
      * @param {number} conversationId - ID of the conversation
      */
     hideConversation: async (conversationId) => {
-        const response = await api.post(`/chat/conversations/${conversationId}/hide/`);
+        const response = await api.post(`/chat/conversations/${conversationId}/delete-for-me/`);
         return response.data;
     },
 };
