@@ -91,8 +91,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
         """Mark all messages in conversation as read"""
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
         from django.utils import timezone
         
         conversation = self.get_object()
@@ -107,28 +105,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
         message_ids = list(unread_messages.values_list('id', flat=True))
         unread_messages.update(is_read=True, read_at=now)
         
-        # Broadcast to other user
-        channel_layer = get_channel_layer()
-
-    @action(detail=True, methods=["post"])
+        return Response({'status': 'read', 'count': len(message_ids)}, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
     def hide(self, request, pk=None):
         """Hide conversation for current user (soft delete)"""
         conversation = self.get_object()
         conversation.is_active = False
         conversation.save()
-        return Response({"status": "hidden"}, status=status.HTTP_200_OK)
-        for message_id in message_ids:
-            async_to_sync(channel_layer.group_send)(
-                f'chat_{conversation.id}',
-                {
-                    'type': 'message_status_update',
-                    'message_id': message_id,
-                    'is_read': True,
-                    'read_at': now.isoformat()
-                }
-            )
-        
-        return Response({'status': 'read', 'count': len(message_ids)}, status=status.HTTP_200_OK)
+        return Response({'status': 'hidden'}, status=status.HTTP_200_OK)
 
     
     @action(detail=True, methods=['get'])
