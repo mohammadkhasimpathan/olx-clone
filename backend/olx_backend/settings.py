@@ -1,7 +1,8 @@
 """
 Django settings for olx_backend project.
 """
-
+import os
+import ssl
 from pathlib import Path
 from decouple import config, Csv
 from datetime import timedelta
@@ -93,8 +94,7 @@ ASGI_APPLICATION = 'olx_backend.asgi.application'
 # Channels Configuration with Redis
 # For Render: Use the Internal Redis URL (redis://..., not rediss://...)
 # The 'redis://' protocol automatically uses plain TCP without SSL
-import os
-import ssl
+
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 
