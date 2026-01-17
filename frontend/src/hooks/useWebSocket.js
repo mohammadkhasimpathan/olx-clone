@@ -71,7 +71,7 @@ export const useWebSocket = (url, onMessage, options = {}) => {
         } catch (error) {
             console.error('[WebSocket] Connection failed:', error);
         }
-    }, [url, enabled, onMessage, reconnectInterval, maxReconnectAttempts]);
+    }, [url, enabled, reconnectInterval, maxReconnectAttempts]);
 
     const disconnect = useCallback(() => {
         if (reconnectTimeout.current) {
